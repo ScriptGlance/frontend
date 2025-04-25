@@ -1,0 +1,46 @@
+.featuresContainer {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 32px;
+    margin-top: 60px;
+}
+
+.feature {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.featureIcon {
+    width: 60px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 16px;
+}
+
+.icon {
+    width: 100%;
+    height: 100%;
+    color: #476647;
+}
+
+.featureTitle {
+    font-size: 20px;
+    font-weight: 600;
+    color: #333333;
+    margin-bottom: 8px;
+}
+
+.featureDescription {
+    font-size: 16px;
+    color: #555555;
+    line-height: 1.5;
+}
+
+@media (max-width: 768px) {
+    .featuresContainer {
+        grid-template-columns: 1fr;
+    }
+}
