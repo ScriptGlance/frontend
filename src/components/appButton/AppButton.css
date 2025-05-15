@@ -1,0 +1,31 @@
+.app-btn {
+    border: none;
+    border-radius: 14px;
+    padding: 14px 28px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    color: #45515C;
+    text-align: center;
+    font-size: 15px;
+    font-style: normal;
+    font-weight: 500;
+    background-color: #fff;
+}
+
+.white-btn {
+    color: #45515c;
+    background-color: #fff;
+}
+
+.white-btn:hover {
+    background-color: #f0f0f0;
+}
+
+.green-btn {
+    background-color: #5e7158;
+    color: #ffffff;
+}
+
+.green-btn:hover {
+    background-color: #4a5b47;
+}
