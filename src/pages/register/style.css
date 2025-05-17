@@ -1,0 +1,138 @@
+.register-page {
+  background-color: #eae9e3;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 20px;
+  width: 100%;
+}
+
+.register-form-wrapper {
+  display: flex;
+  flex: 1;
+  justify-content: center;
+  align-items: center;
+  padding: 15px;
+  margin-top: -40px;
+}
+
+.register-container {
+  border-radius: 16px;
+  padding: 20px;
+  width: 320px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background-color: #fff;
+}
+
+.register-title {
+  font-size: 24px;
+  color: #201f23;
+  margin-bottom: 20px;
+}
+
+.input-wrapper {
+  width: 100%;
+  margin-bottom: 16px;
+}
+
+.register-input {
+  margin: auto;
+}
+
+.register-button {
+  width: 100%;
+  height: 36px;
+  font-size: 14px;
+  margin-bottom: 16px;
+}
+
+.divider-container {
+  width: 240px;
+  display: flex;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.divider-line {
+  flex: 1;
+  height: 1px;
+  background-color: #45515c;
+}
+
+.divider-text {
+  padding: 0 12px;
+  font-size: 14px;
+  color: #201f23;
+}
+
+.social-buttons {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.social-button {
+  width: 110px;
+  height: 36px;
+  border: 1px solid #e1e8ee;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.social-icon {
+  width: 24px;
+  height: 24px;
+}
+
+.login-text {
+  font-size: 12px;
+  color: #596269;
+}
+
+.login-link {
+  color: #395917;
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+@media (max-width: 991px) {
+  .register-container {
+    width: 90%;
+    max-width: 320px;
+  }
+}
+
+@media (max-width: 640px) {
+  .register-title {
+    font-size: 24px;
+  }
+
+  .register-button {
+    width: 100%;
+  }
+
+  .divider-container {
+    width: 100%;
+  }
+
+  .social-buttons {
+    width: 100%;
+  }
+
+  .social-button {
+    width: calc(50% - 6px);
+  }
+}

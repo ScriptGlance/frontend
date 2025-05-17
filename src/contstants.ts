@@ -1,0 +1,1 @@
+export const EMAIL_CONFIRMATION_TIME_SECONDS = 10 * 60;

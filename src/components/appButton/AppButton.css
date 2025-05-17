@@ -1,12 +1,12 @@
 .app-btn {
     border: none;
-    border-radius: 14px;
-    padding: 14px 28px;
+    border-radius: 10px;
+    padding: 8px 16px;
     cursor: pointer;
     transition: background-color 0.3s;
     color: #45515C;
     text-align: center;
-    font-size: 15px;
+    font-size: 13px;
     font-style: normal;
     font-weight: 500;
     background-color: #fff;
@@ -28,4 +28,39 @@
 
 .green-btn:hover {
     background-color: #4a5b47;
+}
+
+.beige-btn {
+    background-color: #e5d6b8;
+    color: #45515c;
+}
+
+.beige-btn:hover {
+    background-color: #d1c6a8;
+}
+
+.app-btn:disabled,
+.app-btn.disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    pointer-events: none;
+    box-shadow: none;
+}
+
+.green-btn:disabled,
+.green-btn.disabled {
+    background-color: #b9c3ba;
+    color: #e7e7e7;
+}
+
+.white-btn:disabled,
+.white-btn.disabled {
+    background-color: #f8f8f8;
+    color: #bfc5ca;
+}
+
+.beige-btn:disabled,
+.beige-btn.disabled {
+    background-color: #c1c1c1;
+    color: #757575;
 }
