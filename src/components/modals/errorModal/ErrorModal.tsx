@@ -1,5 +1,5 @@
 import React from 'react';
-import './style.css';
+import './ErrorModal.css';
 import errorIcon from '../../../assets/error-icon.svg';
 import { BeigeButton } from "../../appButton/AppButton.tsx";
 import BaseModal from "../base/BaseModal.tsx";

@@ -183,7 +183,6 @@ export const RegisterPage = () => {
 
     const closeErrorModal = () => {
         setShowErrorModal(false);
-        setError(null);
     };
 
     return (

@@ -1,0 +1,99 @@
+@keyframes backdrop-fade-in {
+    from {
+        opacity: 0;
+        backdrop-filter: blur(0);
+    }
+    to {
+        opacity: 1;
+        backdrop-filter: blur(2.5px);
+    }
+}
+@keyframes backdrop-fade-out {
+    from {
+        opacity: 1;
+        backdrop-filter: blur(2.5px);
+    }
+    to {
+        opacity: 0;
+        backdrop-filter: blur(0);
+    }
+}
+
+@keyframes modal-fade-slide-up {
+    from {
+        opacity: 0;
+        transform: translateY(48px) scale(0.96);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+@keyframes modal-fade-slide-down {
+    from {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+    to {
+        opacity: 0;
+        transform: translateY(48px) scale(0.96);
+    }
+}
+
+
+.base-modal-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1050;
+}
+
+.base-modal-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    backdrop-filter: blur(2.5px);
+    background-color: rgba(24, 26, 32, 0.48);
+    z-index: 1051;
+    opacity: 0;
+}
+
+.base-modal {
+    position: relative;
+    z-index: 1055;
+    width: 90%;
+    max-width: 420px;
+}
+
+.base-modal-content {
+    background-color: #fff;
+    border-radius: 2rem;
+    box-shadow: 0 8px 32px 0 rgba(0,0,0,0.18), 0 1.5px 4.5px rgba(0,0,0,0.08);
+    border: none;
+    padding: 2.25rem 2rem;
+}
+
+body.modal-open {
+    overflow: hidden;
+}
+
+.base-modal-backdrop.opening {
+    animation: backdrop-fade-in 0.36s cubic-bezier(0.32, 0.72, 0, 1) forwards;
+}
+.base-modal-backdrop.closing {
+    animation: backdrop-fade-out 0.32s cubic-bezier(0.38, 0.62, 0.26, 0.98) forwards;
+}
+
+.base-modal-content.opening {
+    animation: modal-fade-slide-up 0.32s cubic-bezier(0.38, 0.62, 0.26, 0.98) forwards;
+}
+.base-modal-content.closing {
+    animation: modal-fade-slide-down 0.32s cubic-bezier(0.38, 0.62, 0.26, 0.98) forwards;
+}
