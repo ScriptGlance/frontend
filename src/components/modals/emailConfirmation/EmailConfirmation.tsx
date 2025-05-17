@@ -33,18 +33,18 @@ const EmailConfirmationModal: React.FC<EmailConfirmationModalProps> = ({
 
     const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
-    // Initialize input refs
+
     useEffect(() => {
         inputRefs.current = Array(codeLength).fill(null);
     }, [codeLength]);
 
-    // Update time remaining when initialSecondsLeft prop changes
+
     useEffect(() => {
         setTimeRemaining(initialSecondsLeft);
         setIsResendDisabled(initialSecondsLeft > 0);
     }, [initialSecondsLeft]);
 
-    // Timer effect
+
     useEffect(() => {
         if (!show || timeRemaining <= 0) return;
 
@@ -77,7 +77,7 @@ const EmailConfirmationModal: React.FC<EmailConfirmationModalProps> = ({
             return;
         }
 
-        // Reset error state when user starts typing
+
         if (isCodeIncorrect) {
             setIsCodeIncorrect(false);
         }
@@ -86,21 +86,21 @@ const EmailConfirmationModal: React.FC<EmailConfirmationModalProps> = ({
         newCode[index] = value;
         setCode(newCode);
 
-        // Auto-focus next input if current input has a value
+
         if (value !== '' && index < codeLength - 1 && inputRefs.current[index + 1]) {
             inputRefs.current[index + 1]?.focus();
         }
 
-        // Check if all fields are filled and submit automatically
+
         if (newCode.every(digit => digit !== '') && !newCode.includes('')) {
             verifyCode(newCode.join(''));
         }
     };
 
-    // Handle key press
+
     const handleKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
         if (e.key === 'Backspace' && code[index] === '' && index > 0) {
-            // Move to previous input when backspace is pressed on empty input
+
             inputRefs.current[index - 1]?.focus();
         } else if (e.key === 'ArrowLeft' && index > 0) {
             inputRefs.current[index - 1]?.focus();
@@ -109,12 +109,12 @@ const EmailConfirmationModal: React.FC<EmailConfirmationModalProps> = ({
         }
     };
 
-    // Handle paste
+
     const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
         e.preventDefault();
         const pastedData = e.clipboardData.getData('text').trim();
 
-        // Check if pasted content is all digits and the right length
+
         if (/^\d+$/.test(pastedData) && pastedData.length <= codeLength) {
             const newCode = Array(codeLength).fill('');
 
@@ -124,18 +124,18 @@ const EmailConfirmationModal: React.FC<EmailConfirmationModalProps> = ({
 
             setCode(newCode);
 
-            // Focus the input after the last pasted digit
+
             const focusIndex = Math.min(pastedData.length, codeLength - 1);
             inputRefs.current[focusIndex]?.focus();
 
-            // Verify code if full length is pasted
+
             if (pastedData.length === codeLength) {
                 verifyCode(pastedData);
             }
         }
     };
 
-    // Verify code
+
     const verifyCode = async (fullCode: string) => {
         if (isVerifying) return;
 
@@ -156,17 +156,17 @@ const EmailConfirmationModal: React.FC<EmailConfirmationModalProps> = ({
         }
     };
 
-    // Resend email
+
     const handleResendEmail = async () => {
         if (isResendDisabled || isSending) return;
 
         setIsSending(true);
         try {
             await onResendEmail();
-            // Reset timer and disable resend button
+
             setTimeRemaining(EMAIL_CONFIRMATION_TIME_SECONDS);
             setIsResendDisabled(true);
-            // Reset code and error state
+
             setCode(Array(codeLength).fill(''));
             setIsCodeIncorrect(false);
         } catch (error) {
@@ -176,7 +176,7 @@ const EmailConfirmationModal: React.FC<EmailConfirmationModalProps> = ({
         }
     };
 
-    // Reset code fields when the modal is shown
+
     useEffect(() => {
         if (show) {
             setCode(Array(codeLength).fill(''));
