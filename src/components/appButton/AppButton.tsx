@@ -8,23 +8,26 @@ export type AppButtonProps = {
     style?: React.CSSProperties;
     type?: "button" | "submit" | "reset";
     children?: React.ReactNode;
-    variant?: "green" | "white";
+    variant?: "green" | "white" | "beige";
+    disabled?: boolean;
 };
 
 export const AppButton = ({
-    label,
-    className = "",
-    onClick,
-    style,
-    type = "button",
-    children,
-    variant = "white",
+  label,
+  className = "",
+  onClick,
+  style,
+  type = "button",
+  children,
+  variant = "white",
+  disabled = false,
 }: AppButtonProps) => (
     <button
-        className={`app-btn ${variant === "green" ? "green-btn" : "white-btn"} ${className}`}
+        className={`app-btn ${variant === "green" ? "green-btn" : variant === "white" ? "white-btn" : "beige-btn"} ${className}`}
         onClick={onClick}
         style={style}
         type={type}
+        disabled={disabled}
     >
         {label}
         {children}
@@ -37,4 +40,8 @@ export const GreenButton = (props: Omit<AppButtonProps, "variant">) => (
 
 export const WhiteButton = (props: Omit<AppButtonProps, "variant">) => (
     <AppButton {...props} variant="white" />
+);
+
+export const BeigeButton = (props: Omit<AppButtonProps, "variant">) => (
+    <AppButton {...props} variant="beige" />
 );

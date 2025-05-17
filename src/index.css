@@ -1,3 +1,13 @@
 body {
     background-color: #EAE9E3;
 }
+* {
+    font-family: "Montserrat", sans-serif;
+}
+
+.logo {
+    width: 200px;
+    height: auto;
+    box-sizing: border-box;
+    padding: 16px;
+}
