@@ -130,6 +130,34 @@ export class AuthRepository {
             handleApiError(error);
         }
     }
+
+    public async forgotPassword(email: string, role: string = 'user'): Promise<void> {
+        try {
+            const response = await apiClient.post('/auth/forgot-password', { email, role });
+            if (response.error) {
+                throw {
+                    error_code: response.error_code,
+                    message: response.description,
+                };
+            }
+        } catch (error: unknown) {
+            handleApiError(error);
+        }
+    }
+
+    public async resetPassword(token: string, newPassword: string, role: string = 'user'): Promise<void> {
+        try {
+            const response = await apiClient.post('/auth/reset-password', { token, newPassword, role });
+            if (response.error) {
+                throw {
+                    error_code: response.error_code,
+                    message: response.description,
+                };
+            }
+        } catch (error: unknown) {
+            handleApiError(error);
+        }
+    }
 }
 
 export default AuthRepository.getInstance();

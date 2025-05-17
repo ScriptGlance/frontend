@@ -27,8 +27,7 @@ export const LoginPage = () => {
   };
 
   const handleForgotPassword = () => {
-    // TODO: Implement forgot password logic
-    console.log("Forgot password clicked");
+    navigate("/forgot-password");
   };
 
   const handleRegister = () => {
