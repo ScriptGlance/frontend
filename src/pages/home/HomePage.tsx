@@ -4,7 +4,7 @@ import groupPresentationsImage from "../../assets/team-presentation-icon.png";
 import logo from "../../assets/logo.png";
 import textScrollingImage from "../../assets/autoscroll-icon.png";
 import ukrainianLanguageSupport1 from "../../assets/language-icon.png";
-import "./style.css";
+import "./HomePage.css";
 import {
   GreenButton,
   WhiteButton,

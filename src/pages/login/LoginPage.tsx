@@ -1,14 +1,13 @@
-import React, { useState, KeyboardEvent } from "react";
-import { useNavigate } from "react-router-dom";
+import React, {KeyboardEvent, useState} from "react";
+import {useNavigate} from "react-router-dom";
 import logo from "../../assets/logo.png";
-import googleIcon from "../../assets/google-icon.png";
-import facebookIcon from "../../assets/facebook-icon.png";
-import "./style.css";
-import { BeigeButton } from "../../components/appButton/AppButton";
-import { AppInput } from "../../components/appInput/AppInput";
+import "./LoginPage.css";
+import {BeigeButton} from "../../components/appButton/AppButton";
+import {AppInput} from "../../components/appInput/AppInput";
 import {useAuth} from "../../hooks/useAuth.ts";
 import {Role} from "../../types/role.ts"
 import ErrorModal from "../../components/modals/errorModal/ErrorModal.tsx";
+import { SocialAuthButtons } from "../../components/socialAuthButtons/SocialAuthButtons";
 
 export const LoginPage = () => {
   const navigate = useNavigate();
@@ -25,12 +24,6 @@ export const LoginPage = () => {
     } else {
       setShowErrorModal(true);
     }
-  };
-
-
-  const handleSocialLogin = (provider: "google" | "facebook") => {
-    // TODO: Implement social login logic
-    console.log(`${provider} login attempt`);
   };
 
   const handleForgotPassword = () => {
@@ -97,36 +90,7 @@ export const LoginPage = () => {
             />
           </form>
 
-          <div className="divider-container">
-            <div className="divider-line" />
-            <div className="divider-text">Або</div>
-            <div className="divider-line" />
-          </div>
-
-          <div className="social-buttons">
-            <div
-              className="social-button"
-              onClick={() => handleSocialLogin("google")}
-              role="button"
-              tabIndex={0}
-              onKeyPress={(e) =>
-                e.key === "Enter" && handleSocialLogin("google")
-              }
-            >
-              <img src={googleIcon} alt="Google" className="social-icon" />
-            </div>
-            <div
-              className="social-button"
-              onClick={() => handleSocialLogin("facebook")}
-              role="button"
-              tabIndex={0}
-              onKeyPress={(e) =>
-                e.key === "Enter" && handleSocialLogin("facebook")
-              }
-            >
-              <img src={facebookIcon} alt="Facebook" className="social-icon" />
-            </div>
-          </div>
+          <SocialAuthButtons role={Role.User} />
 
           <div className="register-text">
             <span>Немає акаунту? </span>

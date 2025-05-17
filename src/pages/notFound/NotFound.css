@@ -1,0 +1,74 @@
+.not-found-page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background-color: #f8f8f8;
+}
+
+.logo {
+  width: 200px;
+  height: auto;
+}
+
+.not-found-content {
+  display: flex;
+  flex: 1;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+}
+
+.not-found-container {
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  padding: 40px;
+  text-align: center;
+  max-width: 500px;
+  width: 100%;
+}
+
+.not-found-title {
+  font-size: 72px;
+  margin: 0;
+  color: #e49e4a;
+}
+
+.not-found-subtitle {
+  font-size: 24px;
+  margin: 10px 0 20px;
+}
+
+.not-found-message {
+  color: #666;
+  margin-bottom: 30px;
+}
+
+.not-found-buttons {
+  display: flex;
+  justify-content: space-around;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+.not-found-button {
+  min-width: 150px;
+}
+
+@media (max-width: 600px) {
+  .not-found-container {
+    padding: 30px 20px;
+  }
+  
+  .not-found-title {
+    font-size: 60px;
+  }
+  
+  .not-found-subtitle {
+    font-size: 20px;
+  }
+  
+  .not-found-buttons {
+    flex-direction: column;
+  }
+}
