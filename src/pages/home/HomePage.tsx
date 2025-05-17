@@ -16,7 +16,7 @@ export const HomePage = (): JSX.Element => {
   const navigate = useNavigate();
 
   const handleDownloadApk = () => {
-    //TODO - Implement the APK download logic
+
     console.log("Downloading APK...");
   };
 

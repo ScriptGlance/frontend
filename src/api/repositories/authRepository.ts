@@ -41,15 +41,15 @@ export class AuthRepository {
 
 
     public saveToken(token: string): void {
-        localStorage.setItem(import.meta.env.VITE_APP_TOKEN_KEY || 'auth_token', token);
+        localStorage.setItem(import.meta.env.VITE_APP_TOKEN_KEY, token);
     }
 
     public getToken(): string | null {
-        return localStorage.getItem(import.meta.env.VITE_APP_TOKEN_KEY || 'auth_token');
+        return localStorage.getItem(import.meta.env.VITE_APP_TOKEN_KEY);
     }
 
     public removeToken(): void {
-        localStorage.removeItem(import.meta.env.VITE_APP_TOKEN_KEY || 'auth_token');
+        localStorage.removeItem(import.meta.env.VITE_APP_TOKEN_KEY);
     }
 
     public isAuthenticated(): boolean {

@@ -1,344 +1,340 @@
-import React, { useState, useEffect, KeyboardEvent } from "react";
-import { useNavigate } from "react-router-dom";
+import React, {useState, useEffect, KeyboardEvent} from "react";
+import {useNavigate} from "react-router-dom";
 import logo from "../../assets/logo.png";
 import googleIcon from "../../assets/google-icon.png";
 import facebookIcon from "../../assets/facebook-icon.png";
 import "./style.css";
-import { BeigeButton } from "../../components/appButton/AppButton";
-import { AppInput } from "../../components/appInput/AppInput";
+import {BeigeButton} from "../../components/appButton/AppButton";
+import {AppInput} from "../../components/appInput/AppInput";
 import ErrorModal from "../../components/modals/errorModal/ErrorModal.tsx";
 import EmailConfirmationModal from "../../components/modals/emailConfirmation/EmailConfirmation.tsx";
-import { useAuth } from "../../hooks/useAuth.ts";
-import { EMAIL_CONFIRMATION_TIME_SECONDS } from "../../contstants.ts";
+import {useAuth} from "../../hooks/useAuth.ts";
+import {EMAIL_CONFIRMATION_TIME_SECONDS} from "../../contstants.ts";
 
 const EMAIL_CONFIRMATION_LS_KEY = "emailConfirmationInfo";
 
-// --- LocalStorage timer helpers ---
+
 function getConfirmationInfo() {
-  const raw = localStorage.getItem(EMAIL_CONFIRMATION_LS_KEY);
-  if (!raw) return null;
-  try {
-    return JSON.parse(raw) as { email: string; sentAt: number };
-  } catch {
-    return null;
-  }
+    const raw = localStorage.getItem(EMAIL_CONFIRMATION_LS_KEY);
+    if (!raw) return null;
+    try {
+        return JSON.parse(raw) as { email: string; sentAt: number };
+    } catch {
+        return null;
+    }
 }
 
 function setConfirmationInfo(email: string) {
-  localStorage.setItem(
-      EMAIL_CONFIRMATION_LS_KEY,
-      JSON.stringify({ email, sentAt: Date.now() })
-  );
+    localStorage.setItem(
+        EMAIL_CONFIRMATION_LS_KEY,
+        JSON.stringify({email, sentAt: Date.now()})
+    );
 }
 
 function clearConfirmationInfo() {
-  localStorage.removeItem(EMAIL_CONFIRMATION_LS_KEY);
+    localStorage.removeItem(EMAIL_CONFIRMATION_LS_KEY);
 }
 
 function getSecondsLeft(email: string) {
-  const info = getConfirmationInfo();
-  if (!info || info.email !== email) return 0;
-  const secondsPassed = Math.floor((Date.now() - info.sentAt) / 1000);
-  return Math.max(EMAIL_CONFIRMATION_TIME_SECONDS - secondsPassed, 0);
+    const info = getConfirmationInfo();
+    if (!info || info.email !== email) return 0;
+    const secondsPassed = Math.floor((Date.now() - info.sentAt) / 1000);
+    return Math.max(EMAIL_CONFIRMATION_TIME_SECONDS - secondsPassed, 0);
 }
 
-// --- Registration page component ---
+
 export const RegisterPage = () => {
-  // Form state
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [showErrorModal, setShowErrorModal] = useState(false);
-  const [showConfirmationModal, setShowConfirmationModal] = useState(false);
-  const [currentSecondsLeft, setCurrentSecondsLeft] = useState(0);
 
-  const navigate = useNavigate();
-  const {
-    sendVerificationEmail,
-    verifyEmailCode,
-    register,
-    isLoading,
-    error,
-    setError
-  } = useAuth();
+    const [firstName, setFirstName] = useState("");
+    const [lastName, setLastName] = useState("");
+    const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
+    const [confirmPassword, setConfirmPassword] = useState("");
+    const [showErrorModal, setShowErrorModal] = useState(false);
+    const [showConfirmationModal, setShowConfirmationModal] = useState(false);
+    const [currentSecondsLeft, setCurrentSecondsLeft] = useState(0);
 
-  // Update current seconds left periodically
-  // (this runs even when modal is closed to keep state accurate)
-  useEffect(() => {
-    const checkTimer = () => {
-      if (email) {
+    const navigate = useNavigate();
+    const {
+        sendVerificationEmail,
+        verifyEmailCode,
+        register,
+        isLoading,
+        error,
+        setError
+    } = useAuth();
+
+
+    useEffect(() => {
+        const checkTimer = () => {
+            if (email) {
+                const secondsLeft = getSecondsLeft(email);
+                setCurrentSecondsLeft(secondsLeft);
+            }
+        };
+
+
+        checkTimer();
+
+
+        const interval = setInterval(checkTimer, 1000);
+
+        return () => clearInterval(interval);
+    }, [email]);
+
+
+    const handleRegister = async (e: React.FormEvent) => {
+        e.preventDefault();
+
+        if (password !== confirmPassword) {
+            setError("Паролі не співпадають");
+            setShowErrorModal(true);
+            return;
+        }
+
+
         const secondsLeft = getSecondsLeft(email);
-        setCurrentSecondsLeft(secondsLeft);
-      }
+        if (secondsLeft > 0) {
+
+            setCurrentSecondsLeft(secondsLeft);
+            setShowConfirmationModal(true);
+            return;
+        }
+
+
+        try {
+            const sent = await sendVerificationEmail(email, "user");
+            if (sent) {
+                setConfirmationInfo(email);
+                setCurrentSecondsLeft(EMAIL_CONFIRMATION_TIME_SECONDS);
+                setShowConfirmationModal(true);
+            } else {
+                setShowErrorModal(true);
+            }
+        } catch (error) {
+            console.error("Error sending verification email:", error);
+            setError("Помилка надсилання листа підтвердження");
+            setShowErrorModal(true);
+        }
     };
 
-    // Check immediately
-    checkTimer();
 
-    // Set interval to check timer periodically
-    const interval = setInterval(checkTimer, 1000);
-
-    return () => clearInterval(interval);
-  }, [email]);
-
-  // --- Registration logic ---
-  const handleRegister = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (password !== confirmPassword) {
-      setError("Паролі не співпадають");
-      setShowErrorModal(true);
-      return;
-    }
-
-    // Check localStorage for active timer FIRST
-    // Re-fetch seconds left directly to ensure fresh data
-    const secondsLeft = getSecondsLeft(email);
-
-    if (secondsLeft > 0) {
-      // Timer not expired: just show modal without sending email again
-      setCurrentSecondsLeft(secondsLeft);
-      setShowConfirmationModal(true);
-      return;
-    }
-
-    // Only send verification email if timer has expired or doesn't exist
-    try {
-      const sent = await sendVerificationEmail(email, "user");
-      if (sent) {
-        setConfirmationInfo(email);
-        setCurrentSecondsLeft(EMAIL_CONFIRMATION_TIME_SECONDS);
-        setShowConfirmationModal(true);
-      } else {
-        setShowErrorModal(true);
-      }
-    } catch (error) {
-      console.error("Error sending verification email:", error);
-      setError("Помилка надсилання листа підтвердження");
-      setShowErrorModal(true);
-    }
-  };
-
-  // --- Code verification logic ---
-  const handleVerifyCode = async (code: string): Promise<boolean> => {
-    try {
-      const verified = await verifyEmailCode(email, code);
-      if (verified) {
-        const registered = await register({ firstName, lastName, email, password });
-        if (registered) {
-          clearConfirmationInfo();
-          navigate("/dashboard");
-          return true;
-        } else {
-          setShowErrorModal(true);
-          return false;
+    const handleVerifyCode = async (code: string): Promise<boolean> => {
+        try {
+            const verified = await verifyEmailCode(email, code);
+            if (verified) {
+                const registered = await register({firstName, lastName, email, password});
+                if (registered) {
+                    clearConfirmationInfo();
+                    navigate("/dashboard");
+                    return true;
+                } else {
+                    setShowErrorModal(true);
+                    return false;
+                }
+            } else {
+                setShowErrorModal(true);
+                return false;
+            }
+        } catch (error) {
+            console.error("Error verifying code:", error);
+            setShowErrorModal(true);
+            return false;
         }
-      } else {
-        setShowErrorModal(true);
-        return false;
-      }
-    } catch (error) {
-      console.error("Error verifying code:", error);
-      setShowErrorModal(true);
-      return false;
-    }
-  };
+    };
 
-  // --- Resend logic (only after timer expires) ---
-  const resendVerificationEmail = async (): Promise<void> => {
-    // Double check that timer has actually expired
-    if (getSecondsLeft(email) > 0) return;
 
-    try {
-      const sent = await sendVerificationEmail(email, "user");
-      if (sent) {
-        setConfirmationInfo(email);
-        setCurrentSecondsLeft(EMAIL_CONFIRMATION_TIME_SECONDS);
-      } else {
-        setShowErrorModal(true);
-      }
-    } catch (error) {
-      console.error("Error resending verification email:", error);
-      setError("Помилка надсилання листа підтвердження");
-      setShowErrorModal(true);
-    }
-  };
+    const resendVerificationEmail = async (): Promise<void> => {
 
-  // --- Change email handler (reset LS, close modal) ---
-  const handleChangeEmail = () => {
-    clearConfirmationInfo();
-    setCurrentSecondsLeft(0);
-    setShowConfirmationModal(false);
-  };
+        if (getSecondsLeft(email) > 0) return;
 
-  // --- Close confirmation modal ---
-  const closeConfirmationModal = () => {
-    // Just close the modal but keep timer state
-    // DON'T clear localStorage or reset the timer
-    setShowConfirmationModal(false);
-  };
+        try {
+            const sent = await sendVerificationEmail(email, "user");
+            if (sent) {
+                setConfirmationInfo(email);
+                setCurrentSecondsLeft(EMAIL_CONFIRMATION_TIME_SECONDS);
+            } else {
+                setShowErrorModal(true);
+            }
+        } catch (error) {
+            console.error("Error resending verification email:", error);
+            setError("Помилка надсилання листа підтвердження");
+            setShowErrorModal(true);
+        }
+    };
 
-  // --- Misc helpers ---
-  const handleLogin = () => {
-    navigate("/login");
-  };
 
-  const closeErrorModal = () => {
-    setShowErrorModal(false);
-    setError(null);
-  };
+    const handleChangeEmail = () => {
+        setCurrentSecondsLeft(0);
+        setShowConfirmationModal(false);
+    };
 
-  const handleSocialLogin = (provider: "google" | "facebook") => {
-    // TODO: Implement social login logic
-    console.log(`${provider} login attempt`);
-  };
 
-  return (
-      <div className="register-page">
-        <header className="header">
-          <img
-              src={logo}
-              alt="Logo"
-              className="logo"
-              onClick={() => navigate("/")}
-              onKeyPress={(e: KeyboardEvent) => e.key === "Enter" && navigate("/")}
-              role="button"
-              tabIndex={0}
-              style={{ cursor: "pointer" }}
-          />
-        </header>
+    const closeConfirmationModal = () => {
 
-        <div className="register-form-wrapper">
-          <div className="register-container">
-            <h1 className="register-title">Реєстрація</h1>
-            <form onSubmit={handleRegister} style={{ width: "100%" }}>
-              <div className="input-wrapper">
-                <AppInput
-                    type="text"
-                    placeholder="Ім'я"
-                    className="register-input"
-                    value={firstName}
-                    onChange={(e) => setFirstName(e.target.value)}
-                    required
-                    maxLength={100}
+
+        setShowConfirmationModal(false);
+    };
+
+
+    const handleLogin = () => {
+        navigate("/login");
+    };
+
+    const closeErrorModal = () => {
+        setShowErrorModal(false);
+        setError(null);
+    };
+
+    const handleSocialLogin = (provider: "google" | "facebook") => {
+
+        console.log(`${provider} login attempt`);
+    };
+
+    return (
+        <div className="register-page">
+            <header className="header">
+                <img
+                    src={logo}
+                    alt="Logo"
+                    className="logo"
+                    onClick={() => navigate("/")}
+                    onKeyPress={(e: KeyboardEvent) => e.key === "Enter" && navigate("/")}
+                    role="button"
+                    tabIndex={0}
+                    style={{cursor: "pointer"}}
                 />
-              </div>
-              <div className="input-wrapper">
-                <AppInput
-                    type="text"
-                    placeholder="Прізвище"
-                    className="register-input"
-                    value={lastName}
-                    onChange={(e) => setLastName(e.target.value)}
-                    required
-                    maxLength={100}
-                />
-              </div>
-              <div className="input-wrapper">
-                <AppInput
-                    type="email"
-                    placeholder="Email"
-                    className="register-input"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    maxLength={100}
-                />
-              </div>
-              <div className="input-wrapper">
-                <AppInput
-                    type="password"
-                    placeholder="Пароль"
-                    className="register-input"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    minLength={4}
-                    maxLength={255}
-                />
-              </div>
-              <div className="input-wrapper">
-                <AppInput
-                    type="password"
-                    placeholder="Повторіть пароль"
-                    className="register-input"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    required
-                />
-              </div>
-              <BeigeButton
-                  type="submit"
-                  label="Створити акаунт"
-                  className="register-button"
-                  disabled={isLoading}
-              />
-            </form>
+            </header>
 
-            <div className="divider-container">
-              <div className="divider-line" />
-              <div className="divider-text">Або</div>
-              <div className="divider-line" />
-            </div>
+            <div className="register-form-wrapper">
+                <div className="register-container">
+                    <h1 className="register-title">Реєстрація</h1>
+                    <form onSubmit={handleRegister} style={{width: "100%"}}>
+                        <div className="input-wrapper">
+                            <AppInput
+                                type="text"
+                                placeholder="Ім'я"
+                                className="register-input"
+                                value={firstName}
+                                onChange={(e) => setFirstName(e.target.value)}
+                                required
+                                maxLength={100}
+                            />
+                        </div>
+                        <div className="input-wrapper">
+                            <AppInput
+                                type="text"
+                                placeholder="Прізвище"
+                                className="register-input"
+                                value={lastName}
+                                onChange={(e) => setLastName(e.target.value)}
+                                required
+                                maxLength={100}
+                            />
+                        </div>
+                        <div className="input-wrapper">
+                            <AppInput
+                                type="email"
+                                placeholder="Email"
+                                className="register-input"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                required
+                                maxLength={100}
+                            />
+                        </div>
+                        <div className="input-wrapper">
+                            <AppInput
+                                type="password"
+                                placeholder="Пароль"
+                                className="register-input"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                required
+                                minLength={4}
+                                maxLength={255}
+                            />
+                        </div>
+                        <div className="input-wrapper">
+                            <AppInput
+                                type="password"
+                                placeholder="Повторіть пароль"
+                                className="register-input"
+                                value={confirmPassword}
+                                onChange={(e) => setConfirmPassword(e.target.value)}
+                                required
+                            />
+                        </div>
+                        <BeigeButton
+                            type="submit"
+                            label="Створити акаунт"
+                            className="register-button"
+                            disabled={isLoading}
+                        />
+                    </form>
 
-            <div className="social-buttons">
-              <div
-                  className="social-button"
-                  onClick={() => handleSocialLogin("google")}
-                  role="button"
-                  tabIndex={0}
-                  onKeyPress={(e) =>
-                      e.key === "Enter" && handleSocialLogin("google")
-                  }
-              >
-                <img src={googleIcon} alt="Google" className="social-icon" />
-              </div>
-              <div
-                  className="social-button"
-                  onClick={() => handleSocialLogin("facebook")}
-                  role="button"
-                  tabIndex={0}
-                  onKeyPress={(e) =>
-                      e.key === "Enter" && handleSocialLogin("facebook")
-                  }
-              >
-                <img src={facebookIcon} alt="Facebook" className="social-icon" />
-              </div>
-            </div>
+                    <div className="divider-container">
+                        <div className="divider-line"/>
+                        <div className="divider-text">Або</div>
+                        <div className="divider-line"/>
+                    </div>
 
-            <div className="login-text">
-              <span>Вже зареєстровані? </span>
-              <span
-                  className="login-link"
-                  onClick={handleLogin}
-                  role="button"
-                  tabIndex={0}
-                  onKeyPress={(e) => e.key === "Enter" && handleLogin()}
-                  style={{ marginLeft: "5px", cursor: "pointer" }}
-              >
+                    <div className="social-buttons">
+                        <div
+                            className="social-button"
+                            onClick={() => handleSocialLogin("google")}
+                            role="button"
+                            tabIndex={0}
+                            onKeyPress={(e) =>
+                                e.key === "Enter" && handleSocialLogin("google")
+                            }
+                        >
+                            <img src={googleIcon} alt="Google" className="social-icon"/>
+                        </div>
+                        <div
+                            className="social-button"
+                            onClick={() => handleSocialLogin("facebook")}
+                            role="button"
+                            tabIndex={0}
+                            onKeyPress={(e) =>
+                                e.key === "Enter" && handleSocialLogin("facebook")
+                            }
+                        >
+                            <img src={facebookIcon} alt="Facebook" className="social-icon"/>
+                        </div>
+                    </div>
+
+                    <div className="login-text">
+                        <span>Вже зареєстровані? </span>
+                        <span
+                            className="login-link"
+                            onClick={handleLogin}
+                            role="button"
+                            tabIndex={0}
+                            onKeyPress={(e) => e.key === "Enter" && handleLogin()}
+                            style={{marginLeft: "5px", cursor: "pointer"}}
+                        >
               Вхід
             </span>
+                    </div>
+                </div>
             </div>
-          </div>
+
+            <EmailConfirmationModal
+                show={showConfirmationModal}
+                onClose={closeConfirmationModal}
+                email={email}
+                onVerify={handleVerifyCode}
+                onResendEmail={resendVerificationEmail}
+                onChangeEmail={handleChangeEmail}
+                initialSecondsLeft={currentSecondsLeft}
+            />
+
+            <ErrorModal
+                show={showErrorModal}
+                onClose={closeErrorModal}
+                message={error ?? ""}
+            />
         </div>
-
-        <EmailConfirmationModal
-            show={showConfirmationModal}
-            onClose={closeConfirmationModal}
-            email={email}
-            onVerify={handleVerifyCode}
-            onResendEmail={resendVerificationEmail}
-            onChangeEmail={handleChangeEmail}
-            initialSecondsLeft={currentSecondsLeft}
-        />
-
-        <ErrorModal
-            show={showErrorModal}
-            onClose={closeErrorModal}
-            message={error ?? ""}
-        />
-      </div>
-  );
+    );
 };
