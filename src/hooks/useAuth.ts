@@ -99,12 +99,16 @@ export const useAuth = () => {
     }, []);
 
 
-    const logout = useCallback(() => {
-        authRepository.removeToken();
+    const logout = useCallback((role: string) => {
+        authRepository.removeToken(role);
     }, []);
 
-    const isAuthenticated = useCallback(() => {
-        return authRepository.isAuthenticated();
+    const saveToken = useCallback((token: string, role: string) => {
+        authRepository.saveToken(token, role);
+    }, []);
+
+    const isAuthenticated = useCallback((role: string) => {
+        return authRepository.isAuthenticated(role);
     }, []);
 
     return {
@@ -119,6 +123,6 @@ export const useAuth = () => {
         isLoading,
         error,
         setError,
-        saveToken: authRepository.saveToken,
+        saveToken,
     };
 };

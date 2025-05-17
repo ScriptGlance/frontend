@@ -9,6 +9,7 @@ import ResetEmailSentPage from "./pages/forgotPassword/ResetEmailSentPage.tsx";
 import ForgotPasswordPage from "./pages/forgotPassword/ForgotPasswordPage.tsx";
 import ResetPasswordPage from "./pages/forgotPassword/ResetPasswordPage.tsx";
 import {Role} from "./types/role.ts";
+import ProtectedRoute from "./components/route/ProtectedRoute.tsx";
 
 function App() {
     return (
@@ -22,14 +23,21 @@ function App() {
 
                 <Route path="/register" element={<RegisterPage/>}/>
 
-                <Route path="/forgot-password" element={<ForgotPasswordPage role={Role.User} />} />
-                <Route path="/moderator/forgot-password" element={<ForgotPasswordPage role={Role.Moderator} />} />
-                <Route path="/admin/forgot-password" element={<ForgotPasswordPage role={Role.Admin} />} />
+                <Route path="/forgot-password" element={<ForgotPasswordPage role={Role.User}/>}/>
+                <Route path="/moderator/forgot-password" element={<ForgotPasswordPage role={Role.Moderator}/>}/>
+                <Route path="/admin/forgot-password" element={<ForgotPasswordPage role={Role.Admin}/>}/>
                 <Route path="/forgot-password/sent" element={<ResetEmailSentPage/>}/>
                 <Route path="/reset-password" element={<ResetPasswordPage/>}/>
 
                 <Route path="/auth/login-success" element={<LoginSuccess/>}/>
                 <Route path="/auth/no-facebook-linked-emails-error" element={<FacebookEmailError/>}/>
+
+                <Route
+                    path="/dashboard"
+                    element={
+                        <ProtectedRoute role={Role.User}><div></div></ProtectedRoute>
+                    }
+                />
 
                 <Route path="*" element={<NotFound/>}/>
             </Routes>
