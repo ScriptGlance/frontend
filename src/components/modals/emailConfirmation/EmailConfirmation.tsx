@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import './style.css';
+import './EmailConfirmation.css';
 import BaseModal from "../base/BaseModal.tsx";
 import {EMAIL_CONFIRMATION_TIME_SECONDS} from "../../../contstants.ts";
 
@@ -99,15 +99,27 @@ const EmailConfirmationModal: React.FC<EmailConfirmationModalProps> = ({
 
 
     const handleKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
-        if (e.key === 'Backspace' && code[index] === '' && index > 0) {
-
-            inputRefs.current[index - 1]?.focus();
+        if (e.key === 'Backspace') {
+            e.preventDefault();
+            if (code[index]) {
+                const newCode = [...code];
+                newCode[index] = '';
+                setCode(newCode);
+            } else if (index > 0) {
+                inputRefs.current[index - 1]?.focus();
+                const newCode = [...code];
+                newCode[index - 1] = '';
+                setCode(newCode);
+            }
         } else if (e.key === 'ArrowLeft' && index > 0) {
+            e.preventDefault();
             inputRefs.current[index - 1]?.focus();
         } else if (e.key === 'ArrowRight' && index < codeLength - 1) {
+            e.preventDefault();
             inputRefs.current[index + 1]?.focus();
         }
     };
+
 
 
     const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
@@ -198,7 +210,7 @@ const EmailConfirmationModal: React.FC<EmailConfirmationModalProps> = ({
                     {Array.from({ length: codeLength }).map((_, index) => (
                         <input
                             key={index}
-                            ref={el => inputRefs.current[index] = el}
+                            ref={el => { inputRefs.current[index] = el; }}
                             type="text"
                             inputMode="numeric"
                             maxLength={1}
