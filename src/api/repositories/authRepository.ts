@@ -52,7 +52,7 @@ export class AuthRepository {
             }
 
             if (response.data?.token) {
-                this.saveToken(response.data.token);
+                this.saveToken(response.data.token, credentials.role);
                 return response.data.token;
             } else {
                 throw { message: 'No token received in response' };
@@ -62,20 +62,20 @@ export class AuthRepository {
         }
     }
 
-    public saveToken(token: string): void {
-        localStorage.setItem(import.meta.env.VITE_APP_TOKEN_KEY, token);
+    public saveToken(token: string, role: string): void {
+        localStorage.setItem(`${import.meta.env.VITE_APP_TOKEN_KEY}_${role}`, token);
     }
 
-    public getToken(): string | null {
-        return localStorage.getItem(import.meta.env.VITE_APP_TOKEN_KEY);
+    public getToken(role: string): string | null {
+        return localStorage.getItem(`${import.meta.env.VITE_APP_TOKEN_KEY}_${role}`);
     }
 
-    public removeToken(): void {
-        localStorage.removeItem(import.meta.env.VITE_APP_TOKEN_KEY);
+    public removeToken(role: string): void {
+        localStorage.removeItem(`${import.meta.env.VITE_APP_TOKEN_KEY}_${role}`);
     }
 
-    public isAuthenticated(): boolean {
-        return !!this.getToken();
+    public isAuthenticated(role: string): boolean {
+        return !!this.getToken(role);
     }
 
     public async sendVerificationEmail(email: string, role: string = 'user'): Promise<void> {
@@ -121,7 +121,7 @@ export class AuthRepository {
                 };
             }
             if (response.data?.token) {
-                this.saveToken(response.data.token);
+                this.saveToken(response.data.token, 'user');
                 return response.data.token;
             } else {
                 throw { message: 'No token received in response' };
