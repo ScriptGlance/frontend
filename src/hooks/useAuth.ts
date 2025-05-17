@@ -87,6 +87,7 @@ export const useAuth = () => {
         isAuthenticated,
         isLoading,
         error,
-        setError
+        setError,
+        saveToken: authRepository.saveToken,
     };
 };

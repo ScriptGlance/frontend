@@ -1,6 +1,33 @@
 import apiClient from '../axiosClient';
 import { LoginRequest, LoginResponse } from '../../types/auth';
 
+function isApiError(error: unknown): error is {
+    response?: {
+        data?: {
+            error_code?: string;
+        };
+    };
+    error_code?: string;
+} {
+    return (
+        typeof error === 'object' &&
+        error !== null &&
+        ('response' in error || 'error_code' in error)
+    );
+}
+
+function handleApiError(error: unknown): never {
+    if (isApiError(error)) {
+        if (error.response?.data?.error_code) {
+            throw { error_code: error.response.data.error_code };
+        }
+        if (error.error_code) {
+            throw { error_code: error.error_code };
+        }
+    }
+    throw { error_code: 'UNKNOWN_ERROR' };
+}
+
 export class AuthRepository {
     private static instance: AuthRepository;
 
@@ -18,7 +45,10 @@ export class AuthRepository {
             const response = await apiClient.post<LoginResponse>('/auth/login', credentials);
 
             if (response.error) {
-                throw { error_code: response.error_code, message: response.description || 'Authentication failed' };
+                throw {
+                    error_code: response.error_code,
+                    message: response.description || 'Authentication failed',
+                };
             }
 
             if (response.data?.token) {
@@ -27,18 +57,10 @@ export class AuthRepository {
             } else {
                 throw { message: 'No token received in response' };
             }
-        } catch (error: any) {
-            if (error.response?.data) {
-                throw {
-                    error_code: error.response.data.error_code,
-                };
-            }
-            throw {
-                error_code: error.error_code,
-            };
+        } catch (error: unknown) {
+            handleApiError(error);
         }
     }
-
 
     public saveToken(token: string): void {
         localStorage.setItem(import.meta.env.VITE_APP_TOKEN_KEY, token);
@@ -56,22 +78,17 @@ export class AuthRepository {
         return !!this.getToken();
     }
 
-    public async sendVerificationEmail(email: string, role: string = "user"): Promise<void> {
+    public async sendVerificationEmail(email: string, role: string = 'user'): Promise<void> {
         try {
             const response = await apiClient.post('/auth/send-verification-email', { email, role });
-            console.log('response', response);
             if (response.error) {
-                throw { error_code: response.error_code, message: response.description || 'Помилка відправки листа' };
-            }
-        } catch (error: any) {
-            if (error.response?.data) {
                 throw {
-                    error_code: error.response.data.error_code,
+                    error_code: response.error_code,
+                    message: response.description || 'Помилка відправки листа',
                 };
             }
-            throw {
-                error_code: error.error_code,
-            };
+        } catch (error: unknown) {
+            handleApiError(error);
         }
     }
 
@@ -79,41 +96,38 @@ export class AuthRepository {
         try {
             const response = await apiClient.post('/auth/verify-email', { email, code });
             if (response.error) {
-                throw { error_code: response.error_code, message: response.description || 'Неправильний код' };
-            }
-        } catch (error: any) {
-            if (error.response?.data) {
                 throw {
-                    error_code: error.response.data.error_code,
+                    error_code: response.error_code,
+                    message: response.description || 'Неправильний код',
                 };
             }
-            throw {
-                error_code: error.error_code,
-            };
+        } catch (error: unknown) {
+            handleApiError(error);
         }
     }
 
-    public async register(data: { firstName: string, lastName: string, email: string, password: string }): Promise<string> {
+    public async register(data: {
+        firstName: string;
+        lastName: string;
+        email: string;
+        password: string;
+    }): Promise<string> {
         try {
             const response = await apiClient.post('/auth/register', data);
             if (response.error) {
-                throw {error_code: response.error_code, message: response.description || 'Помилка реєстрації'};
+                throw {
+                    error_code: response.error_code,
+                    message: response.description || 'Помилка реєстрації',
+                };
             }
             if (response.data?.token) {
                 this.saveToken(response.data.token);
                 return response.data.token;
             } else {
-                throw {message: 'No token received in response'};
+                throw { message: 'No token received in response' };
             }
-        } catch (error: any) {
-            if (error.response?.data) {
-                throw {
-                    error_code: error.response.data.error_code,
-                };
-            }
-            throw {
-                error_code: error.error_code,
-            };
+        } catch (error: unknown) {
+            handleApiError(error);
         }
     }
 }
