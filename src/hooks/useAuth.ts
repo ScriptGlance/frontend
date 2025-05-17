@@ -1,7 +1,7 @@
-import { useState, useCallback } from 'react';
+import {useState, useCallback} from 'react';
 import authRepository from '../api/repositories/authRepository';
-import { LoginRequest } from '../types/auth';
-import { getErrorMessage } from "../utils/errorMessages";
+import {LoginRequest} from '../types/auth';
+import {getErrorMessage} from "../utils/errorMessages";
 
 type RegisterData = {
     firstName: string;
@@ -70,6 +70,35 @@ export const useAuth = () => {
         }
     }, []);
 
+    const forgotPassword = useCallback(async (email: string, role: string = "user"): Promise<boolean> => {
+        setIsLoading(true);
+        setError(null);
+        try {
+            await authRepository.forgotPassword(email, role);
+            return true;
+        } catch (err: any) {
+            setError(getErrorMessage(err));
+            return false;
+        } finally {
+            setIsLoading(false);
+        }
+    }, []);
+
+    const resetPassword = useCallback(async (token: string, newPassword: string, role: string = "user"): Promise<boolean> => {
+        setIsLoading(true);
+        setError(null);
+        try {
+            await authRepository.resetPassword(token, newPassword, role);
+            return true;
+        } catch (err: any) {
+            setError(getErrorMessage(err));
+            return false;
+        } finally {
+            setIsLoading(false);
+        }
+    }, []);
+
+
     const logout = useCallback(() => {
         authRepository.removeToken();
     }, []);
@@ -84,6 +113,8 @@ export const useAuth = () => {
         verifyEmailCode,
         register,
         logout,
+        forgotPassword,
+        resetPassword,
         isAuthenticated,
         isLoading,
         error,

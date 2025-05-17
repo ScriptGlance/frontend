@@ -3,7 +3,7 @@ import { ErrorCode } from "../types/errorCode";
 export const errorMessages: Record<string, string> = {
     InvalidCredentials: 'Неправильний email або пароль',
     EmailDuplicate: 'Цей email вже використовується',
-    InvalidResetPasswordToken: 'Недійсний токен для скидання пароля',
+    InvalidResetPasswordToken: 'Посилання для скидання пароля недійсне або термін його дії закінчився',
     InvalidEmailVerificationCode: 'Недійсний код підтвердження email',
     EmailNotVerified: 'Email не підтверджено',
     EmailAlreadyVerified: 'Email вже підтверджено',
