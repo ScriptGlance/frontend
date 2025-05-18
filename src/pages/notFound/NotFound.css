@@ -5,11 +5,6 @@
   background-color: #eae9e3;
 }
 
-.logo {
-  width: 200px;
-  height: auto;
-}
-
 .not-found-content {
   display: flex;
   flex: 1;

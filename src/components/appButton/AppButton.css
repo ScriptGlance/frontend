@@ -39,6 +39,15 @@
     background-color: #d1c6a8;
 }
 
+.gray-btn {
+    background-color: #e3e4ea;
+    color: #000;
+}
+
+.gray-btn:hover {
+    background-color: #babdc8;
+}
+
 .app-btn:disabled,
 .app-btn.disabled {
     opacity: 0.6;

@@ -10,6 +10,7 @@ import ForgotPasswordPage from "./pages/forgotPassword/ForgotPasswordPage.tsx";
 import ResetPasswordPage from "./pages/forgotPassword/ResetPasswordPage.tsx";
 import {Role} from "./types/role.ts";
 import ProtectedRoute from "./components/route/ProtectedRoute.tsx";
+import UserDashboardPage from "./pages/userDashboard/UserDashboardPage.tsx";
 
 function App() {
     return (
@@ -35,7 +36,7 @@ function App() {
                 <Route
                     path="/dashboard"
                     element={
-                        <ProtectedRoute role={Role.User}><div></div></ProtectedRoute>
+                        <ProtectedRoute role={Role.User}><UserDashboardPage /></ProtectedRoute>
                     }
                 />
 
