@@ -107,6 +107,10 @@ export const useAuth = () => {
         authRepository.saveToken(token, role);
     }, []);
 
+    const getToken = useCallback((role: string) => {
+        return authRepository.getToken(role);
+    }, []);
+
     const isAuthenticated = useCallback((role: string) => {
         return authRepository.isAuthenticated(role);
     }, []);
@@ -124,5 +128,6 @@ export const useAuth = () => {
         error,
         setError,
         saveToken,
+        getToken,
     };
 };
