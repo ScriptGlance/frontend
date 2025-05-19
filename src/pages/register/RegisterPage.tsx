@@ -4,7 +4,7 @@ import logo from "../../assets/logo.png";
 import "./RegisterPage.css";
 import {BeigeButton} from "../../components/appButton/AppButton";
 import {AppInput} from "../../components/appInput/AppInput";
-import ErrorModal from "../../components/modals/errorModal/ErrorModal.tsx";
+import ErrorModal from "../../components/modals/error/ErrorModal.tsx";
 import EmailConfirmationModal from "../../components/modals/emailConfirmation/EmailConfirmation.tsx";
 import {useAuth} from "../../hooks/useAuth.ts";
 import {EMAIL_CONFIRMATION_TIME_SECONDS} from "../../contstants.ts";

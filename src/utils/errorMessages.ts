@@ -1,4 +1,5 @@
 import { ErrorCode } from "../types/errorCode";
+import {DEFAULT_ERROR_MESSAGE} from "../contstants.ts";
 
 export const errorMessages: Record<string, string> = {
     InvalidCredentials: 'Неправильний email або пароль',
@@ -15,5 +16,5 @@ export const getErrorMessage = (error: any): string => {
     let code = error?.error_code;
     if (typeof code === 'number' && ErrorCode[code]) code = ErrorCode[code];
     if (typeof code === 'string' && errorMessages[code]) return errorMessages[code];
-    return error?.message || 'Сталася помилка. Будь ласка, спробуйте ще раз.';
+    return error?.message || DEFAULT_ERROR_MESSAGE;
 };

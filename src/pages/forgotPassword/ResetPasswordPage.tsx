@@ -4,7 +4,7 @@ import { jwtDecode } from "jwt-decode";
 import logo from "../../assets/logo.png";
 import { AppInput } from "../../components/appInput/AppInput";
 import { BeigeButton } from "../../components/appButton/AppButton";
-import ErrorModal from "../../components/modals/errorModal/ErrorModal.tsx";
+import ErrorModal from "../../components/modals/error/ErrorModal.tsx";
 import { useAuth } from "../../hooks/useAuth";
 import "./ForgotPasswordPage.css";
 

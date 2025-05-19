@@ -6,6 +6,7 @@ import presentationsRepository, {
 } from "../api/repositories/presentationsRepository.ts";
 import {useAuth} from "./useAuth.ts";
 import {Role} from "../types/role.ts";
+import {DEFAULT_ERROR_MESSAGE} from "../contstants.ts";
 
 export const useDashboardData = (queryParams: GetPresentationsParams) => {
     const { getToken } = useAuth();
@@ -31,7 +32,7 @@ export const useDashboardData = (queryParams: GetPresentationsParams) => {
                 setPresentations(list);
             } catch (e: any) {
                 if (e.name === 'CanceledError' || e.name === 'AbortError') return;
-                setError(e.message || "Unknown error");
+                setError(DEFAULT_ERROR_MESSAGE);
             } finally {
                 setLoading(false);
             }
@@ -39,7 +40,6 @@ export const useDashboardData = (queryParams: GetPresentationsParams) => {
 
         fetchData();
 
-        // Abort on cleanup
         return () => controller.abort();
     }, [queryParams, getToken]);
 

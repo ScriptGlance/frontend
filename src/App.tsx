@@ -11,38 +11,41 @@ import ResetPasswordPage from "./pages/forgotPassword/ResetPasswordPage.tsx";
 import {Role} from "./types/role.ts";
 import ProtectedRoute from "./components/route/ProtectedRoute.tsx";
 import UserDashboardPage from "./pages/userDashboard/UserDashboardPage.tsx";
+import {ProfileProvider} from "./hooks/ProfileContext.tsx";
 
 function App() {
     return (
-        <Router>
-            <Routes>
-                <Route path="/" element={<HomePage/>}/>
+        <ProfileProvider>
+            <Router>
+                <Routes>
+                    <Route path="/" element={<HomePage/>}/>
 
-                <Route path="/login" element={<LoginPage role={Role.User}/>}/>
-                <Route path="/moderator/login" element={<LoginPage role={Role.Moderator}/>}/>
-                <Route path="/admin/login" element={<LoginPage role={Role.Admin}/>}/>
+                    <Route path="/login" element={<LoginPage role={Role.User}/>}/>
+                    <Route path="/moderator/login" element={<LoginPage role={Role.Moderator}/>}/>
+                    <Route path="/admin/login" element={<LoginPage role={Role.Admin}/>}/>
 
-                <Route path="/register" element={<RegisterPage/>}/>
+                    <Route path="/register" element={<RegisterPage/>}/>
 
-                <Route path="/forgot-password" element={<ForgotPasswordPage role={Role.User}/>}/>
-                <Route path="/moderator/forgot-password" element={<ForgotPasswordPage role={Role.Moderator}/>}/>
-                <Route path="/admin/forgot-password" element={<ForgotPasswordPage role={Role.Admin}/>}/>
-                <Route path="/forgot-password/sent" element={<ResetEmailSentPage/>}/>
-                <Route path="/reset-password" element={<ResetPasswordPage/>}/>
+                    <Route path="/forgot-password" element={<ForgotPasswordPage role={Role.User}/>}/>
+                    <Route path="/moderator/forgot-password" element={<ForgotPasswordPage role={Role.Moderator}/>}/>
+                    <Route path="/admin/forgot-password" element={<ForgotPasswordPage role={Role.Admin}/>}/>
+                    <Route path="/forgot-password/sent" element={<ResetEmailSentPage/>}/>
+                    <Route path="/reset-password" element={<ResetPasswordPage/>}/>
 
-                <Route path="/auth/login-success" element={<LoginSuccess/>}/>
-                <Route path="/auth/no-facebook-linked-emails-error" element={<FacebookEmailError/>}/>
+                    <Route path="/auth/login-success" element={<LoginSuccess/>}/>
+                    <Route path="/auth/no-facebook-linked-emails-error" element={<FacebookEmailError/>}/>
 
-                <Route
-                    path="/dashboard"
-                    element={
-                        <ProtectedRoute role={Role.User}><UserDashboardPage /></ProtectedRoute>
-                    }
-                />
+                    <Route
+                        path="/dashboard"
+                        element={
+                            <ProtectedRoute role={Role.User}><UserDashboardPage/></ProtectedRoute>
+                        }
+                    />
 
-                <Route path="*" element={<NotFound/>}/>
-            </Routes>
-        </Router>
+                    <Route path="*" element={<NotFound/>}/>
+                </Routes>
+            </Router>
+        </ProfileProvider>
     );
 }
 

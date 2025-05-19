@@ -6,7 +6,7 @@ import { BeigeButton } from "../../components/appButton/AppButton";
 import "./ForgotPasswordPage.css";
 import arrowBack from "../../assets/arrow-back-icon.svg";
 import { useAuth } from "../../hooks/useAuth";
-import ErrorModal from "../../components/modals/errorModal/ErrorModal.tsx";
+import ErrorModal from "../../components/modals/error/ErrorModal.tsx";
 import { Role } from "../../types/role.ts";
 
 interface ForgotPasswordPageProps {
