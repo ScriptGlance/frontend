@@ -8,15 +8,15 @@ import presentationIcon from "../../assets/presentation-icon.svg";
 import statsUsersIcon from "../../assets/stats-users.svg";
 import statsVideoIcon from "../../assets/stats-video.svg";
 import {BeigeButton, GrayButton,} from "../../components/appButton/AppButton";
-import ErrorModal from "../../components/modals/errorModal/ErrorModal.tsx";
+import ErrorModal from "../../components/modals/error/ErrorModal.tsx";
 import "./UserDashboardPage.css";
 import { useDashboardData } from "../../hooks/useDashboardData.ts";
-import { useUserProfile } from "../../hooks/useUserProfile.ts";
 import { Avatar } from "../../components/avatar/Avatar.tsx";
 import { pluralizeUkrainian } from "../../utils/plurals.ts";
 import RightHeaderButtons from "../../components/rightHeaderButtons/RightHeaderButtons.tsx";
 import {useNavigate} from "react-router-dom";
 import {useAuth} from "../../hooks/useAuth.ts";
+import {useProfile} from "../../hooks/ProfileContext.tsx";
 
 
 
@@ -43,7 +43,7 @@ export const UserDashboardPage = () => {
         navigate("/login");
     };
 
-    const { profile: currentUser, loading: profileLoading, error: profileError } = useUserProfile();
+    const { profile: currentUser, loading: profileLoading, error: profileError } = useProfile();
 
     const queryParams = useMemo(() => ({
         type: selectedType,
@@ -117,6 +117,17 @@ export const UserDashboardPage = () => {
     useEffect(() => {
         if (error || profileError) setShowErrorModal(true);
     }, [error, profileError]);
+
+    useEffect(() => {
+        if (!currentUser) return;
+        setPresentations(prev =>
+            prev.map(p =>
+                p.owner.user_id === currentUser.user_id
+                    ? { ...p, owner: { ...p.owner, ...currentUser } }
+                    : p
+            )
+        );
+    }, [currentUser]);
 
     return (
         <div className="dashboard-layout">
@@ -384,7 +395,7 @@ export const UserDashboardPage = () => {
                                                 {presentation.owner.first_name}<br />{presentation.owner.last_name}
                                             </span>
                                             <Avatar
-                                                src={ presentation.owner.avatar ? import.meta.env.VITE_APP_API_BASE_URL + presentation.owner.avatar : null}
+                                                src={presentation.owner.avatar ? import.meta.env.VITE_APP_API_BASE_URL + presentation.owner.avatar : null}
                                                 alt={presentation.owner.first_name}
                                                 size={36}
                                             />

@@ -6,7 +6,7 @@ import {BeigeButton} from "../../components/appButton/AppButton";
 import {AppInput} from "../../components/appInput/AppInput";
 import {useAuth} from "../../hooks/useAuth.ts";
 import {Role} from "../../types/role.ts"
-import ErrorModal from "../../components/modals/errorModal/ErrorModal.tsx";
+import ErrorModal from "../../components/modals/error/ErrorModal.tsx";
 import {SocialAuthButtons} from "../../components/socialAuthButtons/SocialAuthButtons";
 
 interface LoginPageProps {

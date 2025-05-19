@@ -7,7 +7,6 @@ export class ApiClient {
     private constructor() {
         this.axios = axios.create({
             baseURL: import.meta.env.VITE_APP_API_BASE_URL,
-            headers: { 'Content-Type': 'application/json' },
         });
 
         this.axios.interceptors.request.use(
@@ -40,22 +39,38 @@ export class ApiClient {
     }
 
     public async get<T = any>(url: string, config?: AxiosRequestConfig): Promise<T> {
-        const response = await this.axios.get<T>(url, config);
+        const mergedConfig = {
+            headers: { 'Content-Type': 'application/json', ...(config?.headers || {}) },
+            ...config
+        };
+        const response = await this.axios.get<T>(url, mergedConfig);
         return response.data;
     }
 
     public async post<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> {
-        const response = await this.axios.post<T>(url, data, config);
+        const mergedConfig = {
+            headers: { 'Content-Type': 'application/json', ...(config?.headers || {}) },
+            ...config
+        };
+        const response = await this.axios.post<T>(url, data, mergedConfig);
         return response.data;
     }
 
     public async put<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> {
-        const response = await this.axios.put<T>(url, data, config);
+        const mergedConfig = {
+            headers: { 'Content-Type': 'application/json', ...(config?.headers || {}) },
+            ...config
+        };
+        const response = await this.axios.put<T>(url, data, mergedConfig);
         return response.data;
     }
 
     public async delete<T = any>(url: string, config?: AxiosRequestConfig): Promise<T> {
-        const response = await this.axios.delete<T>(url, config);
+        const mergedConfig = {
+            headers: { 'Content-Type': 'application/json', ...(config?.headers || {}) },
+            ...config
+        };
+        const response = await this.axios.delete<T>(url, mergedConfig);
         return response.data;
     }
 }
