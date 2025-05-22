@@ -1,0 +1,18 @@
+.app-logo-block {
+    display: flex;
+    flex-direction: column;
+    padding: 16px;
+}
+
+.app-logo-block .logo {
+    padding: 0;
+}
+
+.logo-premium-label {
+    color: #536B5B;
+    position: relative;
+    top: -20px;
+    left: 48px;
+    font-weight: 600;
+}
+

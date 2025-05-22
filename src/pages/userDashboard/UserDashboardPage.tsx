@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect, useRef, useCallback } from "react";
+import React, {useMemo, useState, useEffect, useRef, useCallback} from "react";
 import logo from "../../assets/logo.png";
 import illustration from "../../assets/dashboard-illustration.png";
 import filterIcon from "../../assets/filter.svg";
@@ -10,14 +10,16 @@ import statsVideoIcon from "../../assets/stats-video.svg";
 import {BeigeButton, GrayButton,} from "../../components/appButton/AppButton";
 import ErrorModal from "../../components/modals/error/ErrorModal.tsx";
 import "./UserDashboardPage.css";
-import { useDashboardData } from "../../hooks/useDashboardData.ts";
-import { Avatar } from "../../components/avatar/Avatar.tsx";
-import { pluralizeUkrainian } from "../../utils/plurals.ts";
+import {useDashboardData} from "../../hooks/useDashboardData.ts";
+import {Avatar} from "../../components/avatar/Avatar.tsx";
+import {pluralizeUkrainian} from "../../utils/plurals.ts";
 import RightHeaderButtons from "../../components/rightHeaderButtons/RightHeaderButtons.tsx";
 import {useNavigate} from "react-router-dom";
 import {useAuth} from "../../hooks/useAuth.ts";
 import {useProfile} from "../../hooks/ProfileContext.tsx";
-
+import {Presentation} from "../../api/repositories/presentationsRepository.ts";
+import {usePresentationGlobalActions} from "../../hooks/usePresentationActions.ts";
+import Logo from "../../components/logo/Logo.tsx";
 
 
 export const UserDashboardPage = () => {
@@ -28,22 +30,39 @@ export const UserDashboardPage = () => {
     const [sort, setSort] = useState<"byUpdatedAt" | "byName" | "byCreatedAt" | "byParticipantsCount">("byUpdatedAt");
     const [showErrorModal, setShowErrorModal] = useState(false);
 
-    const [presentations, setPresentations] = useState<any[]>([]);
+    const [presentations, setPresentations] = useState<Presentation[]>([]);
     const [isInitialLoading, setIsInitialLoading] = useState(true);
     const [offset, setOffset] = useState(0);
     const [hasMore, setHasMore] = useState(true);
     const LIMIT = 20;
 
-    const { logout } = useAuth();
+    const {logout} = useAuth();
 
     const navigate = useNavigate();
+
+    const {
+        createPresentation, createError
+    } = usePresentationGlobalActions();
+
 
     const handleLogout = () => {
         logout("user");
         navigate("/login");
     };
 
-    const { profile: currentUser, loading: profileLoading, error: profileError } = useProfile();
+    const handlePresentationClick = (presentationId: number) => {
+        navigate(`/presentation/${presentationId}`);
+    };
+
+    const handleCreatePresentation = async () => {
+        const created = await createPresentation();
+        handlePresentationClick(created.presentation_id);
+        if (createError) {
+            setShowErrorModal(true);
+        }
+    };
+
+    const {profile: currentUser, loading: profileLoading, error: profileError} = useProfile();
 
     const queryParams = useMemo(() => ({
         type: selectedType,
@@ -55,7 +74,7 @@ export const UserDashboardPage = () => {
         offset,
     }), [selectedType, selectedDate, selectedOwner, search, sort, offset]);
 
-    const { stats, presentations: fetchedPresentations, loading, error } = useDashboardData(queryParams);
+    const {stats, presentations: fetchedPresentations, loading, error} = useDashboardData(queryParams);
 
     useEffect(() => {
         setOffset(0);
@@ -89,7 +108,7 @@ export const UserDashboardPage = () => {
     const handleScroll = useCallback(() => {
         if (loading || !hasMore || isFetching.current || !presentationsListRef.current) return;
 
-        const { scrollTop, scrollHeight, clientHeight } = presentationsListRef.current;
+        const {scrollTop, scrollHeight, clientHeight} = presentationsListRef.current;
 
         if (scrollTop + clientHeight >= scrollHeight - 100) {
             isFetching.current = true;
@@ -123,7 +142,7 @@ export const UserDashboardPage = () => {
         setPresentations(prev =>
             prev.map(p =>
                 p.owner.user_id === currentUser.user_id
-                    ? { ...p, owner: { ...p.owner, ...currentUser } }
+                    ? {...p, owner: {...p.owner, ...currentUser}}
                     : p
             )
         );
@@ -133,13 +152,13 @@ export const UserDashboardPage = () => {
         <div className="dashboard-layout">
             <header className="dashboard-header">
                 <div className="welcome-section">
-                    <img src={logo} alt="ScriptGlance" className="logo"/>
+                    <Logo premium={currentUser?.has_premium} />
                     <h1 className="welcome-title">
                         {profileLoading ? "Завантаження..." : `Вітаю, ${currentUser?.first_name || "Користувач"}!`}
                     </h1>
                     <p className="welcome-subtitle">Керуйте своїми виступами.</p>
                     <div className="welcome-button-container">
-                        <BeigeButton label="Створити виступ" className="create-btn"/>
+                        <BeigeButton label="Створити виступ" className="create-btn" onClick={handleCreatePresentation}/>
                     </div>
                 </div>
                 <div className="illustration-section">
@@ -149,13 +168,13 @@ export const UserDashboardPage = () => {
                     <RightHeaderButtons
                         avatar={currentUser?.avatar ? import.meta.env.VITE_APP_API_BASE_URL + currentUser.avatar : null}
                         userName={currentUser?.first_name || "Користувач"}
-                        onChat={() => {/* TODO: handle open chat */ }}
+                        onChat={() => {/* TODO: handle open chat */
+                        }}
                         onLogout={handleLogout}
-                        onBuyPremium={() => { /* TODO: handle buy premium */ }}
                     />
                     <div className="stats-cards">
                         <div className="stats-card">
-                            <div className="stats-icon-wrapper" style={{ background: '#D3DDD7' }}>
+                            <div className="stats-icon-wrapper" style={{background: '#D3DDD7'}}>
                                 <img src={statsDocsIcon} alt="Виступи" className="stats-icon"/>
                             </div>
                             <div className="stats-text">
@@ -166,7 +185,7 @@ export const UserDashboardPage = () => {
                             </div>
                         </div>
                         <div className="stats-card">
-                            <div className="stats-icon-wrapper" style={{ background: '#E3E4EA' }}>
+                            <div className="stats-icon-wrapper" style={{background: '#E3E4EA'}}>
                                 <img src={statsUsersIcon} alt="Учасники" className="stats-icon"/>
                             </div>
                             <div className="stats-text">
@@ -177,7 +196,7 @@ export const UserDashboardPage = () => {
                             </div>
                         </div>
                         <div className="stats-card">
-                            <div className="stats-icon-wrapper" style={{ background: '#F1E8D6' }}>
+                            <div className="stats-icon-wrapper" style={{background: '#F1E8D6'}}>
                                 <img src={statsVideoIcon} alt="Записи" className="stats-icon"/>
                             </div>
                             <div className="stats-text">
@@ -195,7 +214,7 @@ export const UserDashboardPage = () => {
                 <div className="main-content">
                     <section className="filters-section">
                         <div className="filters-header">
-                            <div className="stats-icon-wrapper" style={{ background: '#E3E4EA' }}>
+                            <div className="stats-icon-wrapper" style={{background: '#E3E4EA'}}>
                                 <img src={filterIcon} alt="Фільтр" className="filter-icon"/>
                             </div>
                             <div className="filters-title">Фільтри виступів</div>
@@ -370,7 +389,8 @@ export const UserDashboardPage = () => {
                                 <div className="presentations-not-found">Виступів не знайдено</div>
                             ) : (
                                 presentations.map(presentation => (
-                                    <div key={presentation.presentation_id} className="presentation-item">
+                                    <div key={presentation.presentation_id} className="presentation-item"
+                                         onClick={() => handlePresentationClick(presentation.presentation_id)}>
                                         <div className="presentation-icon-circle">
                                             <img src={presentationIcon} alt="Документ"/>
                                         </div>
@@ -392,7 +412,7 @@ export const UserDashboardPage = () => {
                                         </div>
                                         <div className="presentation-owner">
                                             <span className="owner-name">
-                                                {presentation.owner.first_name}<br />{presentation.owner.last_name}
+                                                {presentation.owner.first_name}<br/>{presentation.owner.last_name}
                                             </span>
                                             <Avatar
                                                 src={presentation.owner.avatar ? import.meta.env.VITE_APP_API_BASE_URL + presentation.owner.avatar : null}

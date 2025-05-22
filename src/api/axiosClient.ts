@@ -40,12 +40,13 @@ export class ApiClient {
 
     public async get<T = any>(url: string, config?: AxiosRequestConfig): Promise<T> {
         const mergedConfig = {
-            headers: { 'Content-Type': 'application/json', ...(config?.headers || {}) },
-            ...config
+            ...config,
+            headers: { ...(config?.headers || {}) },
         };
         const response = await this.axios.get<T>(url, mergedConfig);
         return response.data;
     }
+
 
     public async post<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> {
         const mergedConfig = {

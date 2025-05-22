@@ -1,0 +1,121 @@
+.premium-purchase-modal-close-btn {
+    position: absolute;
+    right: 18px;
+    top: 18px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 4px;
+    display: flex;
+}
+
+.premium-purchase-modal-title {
+    margin: 0 0 10px 0;
+    font-size: 28px;
+    color: #69795d;
+    font-weight: 600;
+    text-align: center;
+}
+
+.premium-purchase-modal-desc {
+    color: #4f546a;
+    font-size: 17px;
+    margin-bottom: 25px;
+    text-align: center;
+    font-weight: 400;
+}
+
+.premium-purchase-modal-table {
+    width: 100%;
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    margin-bottom: 18px;
+}
+
+.premium-purchase-modal-col {
+    width: 50%;
+    box-sizing: border-box;
+    padding: 0 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.premium-purchase-modal-col-title {
+    margin-bottom: 7px;
+    font-size: 19px;
+    font-weight: 600;
+    text-align: left;
+}
+
+.premium-purchase-modal-col-title.free {
+    color: #606086;
+}
+
+.premium-purchase-modal-col-title.premium {
+    color: #69795d;
+}
+
+.premium-purchase-modal-features-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.premium-purchase-modal-feature {
+    display: flex;
+    align-items: flex-start;
+    margin-bottom: 8px;
+    font-size: 16px;
+    color: #48506b;
+    font-weight: 400;
+}
+
+.premium-purchase-modal-feature .feature-icon {
+    width: 21px;
+    height: 21px;
+    margin-right: 6px;
+    margin-top: 2px;
+}
+
+.premium-purchase-modal-feature.free {
+    color: #606086;
+}
+
+.premium-purchase-modal-feature.premium {
+    color: #69795d;
+}
+
+.premium-purchase-modal-price-block {
+    margin-top: 18px;
+    text-align: center;
+}
+
+.premium-purchase-modal-price {
+    font-size: 24px;
+    color: #69795d;
+    font-weight: 600;
+    margin-bottom: 12px;
+}
+
+.premium-purchase-modal-buy-btn {
+    background: #69795d;
+    border: none;
+    border-radius: 8px;
+    color: #fff;
+    font-size: 18px;
+    font-weight: 500;
+    padding: 13px 0;
+    width: 220px;
+    margin-top: 8px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.premium-purchase-modal-buy-btn:active {
+    background: #50603a;
+}
+.premium-purchase-modal-buy-btn[disabled] {
+    opacity: 0.55;
+    cursor: not-allowed;
+}

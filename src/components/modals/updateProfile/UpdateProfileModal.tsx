@@ -68,7 +68,7 @@ const UpdateProfileModal: React.FC<UpdateProfileModalProps> = ({
     }, [open, initialProfile]);
 
     return (
-        <BaseModal show={open} onClose={onClose} closeOnBackdropClick={false}>
+        <BaseModal show={open} onClose={onClose} closeOnBackdropClick>
             <form
                 className="update-profile-modal-dialog"
                 onSubmit={async (e) => {

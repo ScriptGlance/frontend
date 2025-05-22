@@ -1,0 +1,194 @@
+.subscription-status-title {
+    margin: 17px 0 24px 0;
+    font-size: 29px;
+    color: #69795d;
+    font-weight: 600;
+    text-align: center;
+}
+
+.subscription-status-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 19px;
+}
+
+.subscription-status-details {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.subscription-status-label {
+    margin: 0 0 3.5px 0;
+    font-size: 15.5px;
+    color: #6a7285;
+}
+
+.subscription-status-label strong {
+    font-weight: 600;
+    margin-left: 3.5px;
+    color: #4b5165;
+}
+
+.subscription-status-cancel-btn {
+    font-size: 13.5px;
+    font-weight: 500;
+    padding: 8.5px 17.5px;
+}
+
+.subscription-status-section-title {
+    margin: 0 0 14px 0;
+    font-size: 18.5px;
+    color: #69795d;
+    font-weight: 600;
+}
+
+.subscription-status-card {
+    display: flex;
+    align-items: center;
+    background: transparent;
+    border: 1px solid #595d75;
+    border-radius: 17px;
+    padding: 12px 14px;
+    width: 100%;
+    box-sizing: border-box;
+    margin-bottom: 30px;
+}
+
+.subscription-status-card-logo {
+    max-height: 43px;
+    max-width: 80px;
+    margin-right: 14px;
+}
+
+.subscription-status-card-number {
+    font-size: 19.5px;
+    color: #404756;
+    letter-spacing: 0.85px;
+    margin-right: auto;
+}
+
+.subscription-status-card-update-btn {
+    background: transparent;
+    border: 1px solid #595d75;
+    border-radius: 8.5px;
+    color: #000;
+    font-size: 13px;
+    font-weight: 500;
+    padding: 7px 17.5px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.subscription-status-card-update-btn:hover {
+    background: #e6ebed;
+}
+.subscription-status-transactions {
+    margin-top: 7px;
+    max-height: 195px;
+    overflow-y: auto;
+}
+
+.subscription-status-transaction-row {
+    display: grid;
+    grid-template-columns: 165px 80px auto;
+    padding: 4.5px 0;
+    font-size: 15px;
+    color: #48506b;
+}
+
+.subscription-status-transaction-date {
+    color: #48506b;
+}
+
+.subscription-status-transaction-amount {
+    font-weight: 600;
+    color: #48506b;
+    font-size: 15px;
+}
+
+.subscription-status-transaction-status-success {
+    color: #608660;
+    font-weight: 500;
+}
+
+.subscription-status-transaction-status-failed {
+    color: #de5b4b;
+    font-weight: 500;
+}
+
+.subscription-status-transaction-status-processing {
+    color: #ea8246;
+    font-weight: 500;
+}
+
+.subscription-status-no-transactions {
+    color: #8b8b8b;
+    font-size: 13.5px;
+    margin-top: 5px;
+    text-align: center;
+    padding: 13px 0;
+}
+
+.subscription-status-close-btn {
+    position: absolute;
+    right: 14px;
+    top: 14px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 3.5px;
+    display: flex;
+}
+
+.subscription-status-card-loader {
+    width: 100%;
+    min-height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.subscription-status-transactions-loader {
+    width: 100%;
+    min-height: 84px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.subscription-status-loading-indicator,
+.subscription-status-card-loader,
+.subscription-status-transactions-loader {
+    min-height: 48px;
+}
+
+.subscription-status-loading-dots {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    justify-content: center;
+}
+
+.subscription-status-loading-dots > div {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #8a9cb3;
+    opacity: 0.8;
+    animation: dotPulse 1.2s infinite linear;
+}
+
+.subscription-status-loading-dots > div:nth-child(2) {
+    animation-delay: 0.25s;
+}
+.subscription-status-loading-dots > div:nth-child(3) {
+    animation-delay: 0.5s;
+}
+
+@keyframes dotPulse {
+    0%, 80%, 100% { opacity: 0.6; transform: scale(1); }
+    40% { opacity: 1; transform: scale(1.2); }
+}
+

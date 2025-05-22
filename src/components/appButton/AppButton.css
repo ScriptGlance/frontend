@@ -48,6 +48,15 @@
     background-color: #babdc8;
 }
 
+.red-btn {
+    background-color: #EA4335;
+    color: #ffffff;
+}
+
+.red-btn:hover {
+    background-color: #c83f31;
+}
+
 .app-btn:disabled,
 .app-btn.disabled {
     opacity: 0.6;
@@ -72,4 +81,10 @@
 .beige-btn.disabled {
     background-color: #c1c1c1;
     color: #757575;
+}
+
+.red-btn:disabled,
+.red-btn.disabled {
+    background-color: #c87a76;
+    color: #e7e7e7;
 }
