@@ -72,12 +72,27 @@
     max-width: 420px;
 }
 
+.base-modal--wide {
+    max-width: 500px;
+}
+
+.base-modal--fullscreen {
+    max-width: 100%;
+}
+
+.base-modal-content--transparent {
+    box-shadow: none !important;
+    background-color: transparent !important;
+    padding: 0 !important;
+}
+
+
 .base-modal-content {
     background-color: #fff;
     border-radius: 2rem;
     box-shadow: 0 8px 32px 0 rgba(0,0,0,0.18), 0 1.5px 4.5px rgba(0,0,0,0.08);
     border: none;
-    padding: 2.25rem 2rem;
+    padding: 1.5rem 2rem;
 }
 
 body.modal-open {

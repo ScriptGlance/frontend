@@ -1,0 +1,115 @@
+.video-player-fullscreen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(24, 28, 34, 0.98);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    overflow: hidden;
+}
+
+.video-player-container {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    max-width: 100vw;
+    max-height: 100vh;
+    margin: 0;
+    padding: 0;
+    position: relative;
+}
+
+/* Better responsive video handling */
+.video-player-container .custom-video-player-root {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+
+/* Video element styling with better aspect ratio handling */
+.video-player-container .cvp-video {
+    max-width: 100% !important;
+    max-height: 100vh !important; /* Account for controls */
+    height: auto !important;
+    object-fit: contain;
+    margin: auto;
+}
+
+/* Ensure controls have proper z-index and positioning */
+.video-player-container .cvp-header {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    z-index: 10;
+}
+
+.video-player-container .cvp-footer {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    z-index: 10;
+}
+
+/* Maintain proper control spacing */
+.video-player-container .cvp-controls-row {
+    padding: 0 20px;
+}
+
+/* Message styling */
+.video-player-message {
+    color: #fff;
+    text-align: center;
+    padding: 24px;
+    background: rgba(26, 34, 42, 0.7);
+    border-radius: 10px;
+    font-size: 1.2rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    max-width: 500px;
+    margin: 0 24px;
+    box-shadow: 0 8px 32px 0 rgba(30, 40, 70, 0.26);
+}
+
+.video-player-loading {
+    animation: pulse 1.5s infinite;
+}
+
+.video-player-back-button {
+    margin-top: 20px;
+    padding: 10px 24px;
+    border-radius: 8px;
+    border: none;
+    background: #5e7158;
+    color: #fff;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.1s;
+}
+
+.video-player-back-button:hover {
+    background: #6b825f;
+}
+
+.video-player-back-button:active {
+    transform: scale(0.98);
+}
+
+@keyframes pulse {
+    0% { opacity: 0.8; }
+    50% { opacity: 1; }
+    100% { opacity: 0.8; }
+}

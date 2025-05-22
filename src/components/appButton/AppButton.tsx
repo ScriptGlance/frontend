@@ -1,6 +1,8 @@
 import React from "react";
 import "./AppButton.css";
 
+export type ButtonVariant = "green" | "white" | "beige" | "gray" | "red";
+
 export type AppButtonProps = {
     label: string;
     className?: string;
@@ -8,9 +10,26 @@ export type AppButtonProps = {
     style?: React.CSSProperties;
     type?: "button" | "submit" | "reset";
     children?: React.ReactNode;
-    variant?: "green" | "white" | "beige" | "gray";
+    variant?: ButtonVariant;
     disabled?: boolean;
 };
+
+function getButtonClassName(variant: ButtonVariant) {
+    switch (variant) {
+        case "green":
+            return "green-btn";
+        case "white":
+            return "white-btn";
+        case "gray":
+            return "gray-btn";
+        case "beige":
+            return "beige-btn";
+        case "red":
+            return "red-btn";
+        default:
+            return "";
+    }
+}
 
 export const AppButton = ({
   label,
@@ -23,7 +42,7 @@ export const AppButton = ({
   disabled = false,
 }: AppButtonProps) => (
     <button
-        className={`app-btn ${variant === "green" ? "green-btn" : variant === "white" ? "white-btn" : variant === "gray" ? "gray-btn" : "beige-btn"} ${className}`}
+        className={`app-btn ${getButtonClassName(variant)} ${className}`}
         onClick={onClick}
         style={style}
         type={type}
@@ -48,4 +67,8 @@ export const GrayButton = (props: Omit<AppButtonProps, "variant">) => (
 
 export const BeigeButton = (props: Omit<AppButtonProps, "variant">) => (
     <AppButton {...props} variant="beige" />
+);
+
+export const RedButton = (props: Omit<AppButtonProps, "variant">) => (
+    <AppButton {...props} variant="red" />
 );

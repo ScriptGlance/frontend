@@ -42,7 +42,6 @@ class UserRepository {
         token: string,
         data: UserProfileUpdateData
     ): Promise<UserProfile> {
-        console.log('data', data);
         const formData = new FormData();
         if (data.avatar && data.avatar instanceof File) {
             formData.append('avatar', data.avatar);

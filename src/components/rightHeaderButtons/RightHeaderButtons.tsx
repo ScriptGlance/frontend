@@ -1,28 +1,28 @@
-import {useState} from "react";
-import {GreenButton} from "../appButton/AppButton";
+import React, { useState } from "react";
+import { GreenButton } from "../appButton/AppButton";
 import RoundButton from "../roundButton/RoundButton";
-import {Avatar} from "../avatar/Avatar";
+import { Avatar } from "../avatar/Avatar";
 import chatIcon from "../../assets/chat.svg";
 import logoutIcon from "../../assets/logout.svg";
 
 import './RightHeaderButtons.css';
-import {useProfile} from "../../hooks/ProfileContext.tsx";
+import { useProfile } from "../../hooks/ProfileContext.tsx";
 import UpdateProfileModal from "../modals/updateProfile/UpdateProfileModal.tsx";
+import PremiumSubscriptionModal from "../modals/subscriptionStatus/SubscriptionStatusModal.tsx";
+import BuySubscriptionModal from "../modals/buySubscription/BuySubscriptionModal.tsx";
 
 interface RightHeaderButtonsProps {
     onChat?: () => void;
     onLogout?: () => void;
-    onBuyPremium?: () => void;
 }
 
 const RightHeaderButtons = ({
                                 onChat,
                                 onLogout,
-                                onBuyPremium,
                             }: RightHeaderButtonsProps) => {
-
-    const {profile, updateProfile, loading} = useProfile();
+    const { profile, updateProfile, loading } = useProfile();
     const [modalOpen, setModalOpen] = useState(false);
+    const [premiumModalOpen, setPremiumModalOpen] = useState(false);
 
     const handleAvatarClick = () => {
         if (profile) setModalOpen(true);
@@ -33,15 +33,19 @@ const RightHeaderButtons = ({
         setModalOpen(false);
     };
 
+    const handlePremiumClick = () => {
+        setPremiumModalOpen(true);
+    };
+
     return (
         <div className="header-buttons">
             <GreenButton
-                label="Купити преміум"
+                label={profile?.has_premium ? "Керувати підпискою" : "Купити преміум"}
                 className="premium-btn"
-                onClick={onBuyPremium}
+                onClick={handlePremiumClick}
             />
             <RoundButton
-                icon={<img src={chatIcon} alt="Чат"/>}
+                icon={<img src={chatIcon} alt="Чат" />}
                 ariaLabel="Чат"
                 className="round-btn"
                 onClick={onChat}
@@ -53,7 +57,7 @@ const RightHeaderButtons = ({
                 size={42}
             />
             <RoundButton
-                icon={<img src={logoutIcon} alt="Вихід"/>}
+                icon={<img src={logoutIcon} alt="Вихід" />}
                 ariaLabel="Вихід"
                 className="round-btn"
                 onClick={onLogout}
@@ -69,6 +73,17 @@ const RightHeaderButtons = ({
                     onClose={() => setModalOpen(false)}
                     onSave={handleProfileSave}
                     loading={loading}
+                />
+            )}
+            {profile?.has_premium ? (
+                <PremiumSubscriptionModal
+                    open={premiumModalOpen}
+                    onClose={() => setPremiumModalOpen(false)}
+                />
+            ) : (
+                <BuySubscriptionModal
+                    open={premiumModalOpen}
+                    onClose={() => setPremiumModalOpen(false)}
                 />
             )}
         </div>

@@ -6,16 +6,22 @@ interface BaseModalProps {
     onClose: () => void;
     children: React.ReactNode;
     closeOnBackdropClick?: boolean;
+    wide?: boolean;
+    fullscreen?: boolean;
+    transparent?: boolean;
 }
 
 const ANIMATION_DURATION_MS = 320;
 
 const BaseModal: React.FC<BaseModalProps> = ({
-     show,
-     onClose,
-     children,
-     closeOnBackdropClick = true
- }) => {
+                                                 show,
+                                                 onClose,
+                                                 children,
+                                                 fullscreen = false,
+                                                 wide = false,
+                                                 closeOnBackdropClick = true,
+                                                 transparent = false,
+                                             }) => {
     const [visible, setVisible] = useState(show);
     const [isClosing, setIsClosing] = useState(false);
     const timeoutRef = useRef<number | null>(null);
@@ -65,8 +71,9 @@ const BaseModal: React.FC<BaseModalProps> = ({
                 className={`base-modal-backdrop ${isClosing ? 'closing' : 'opening'}`}
                 onClick={handleBackdropClick}
             ></div>
-            <div className="base-modal">
-                <div className={`base-modal-content ${isClosing ? 'closing' : 'opening'}`}>
+            <div
+                className={`base-modal ${fullscreen ? "base-modal--fullscreen" : wide ? " base-modal--wide" : ""} ${transparent ? "base-modal--transparent" : ""}`}>
+                <div className={`base-modal-content ${transparent ? "base-modal-content--transparent" : ""} ${isClosing ? 'closing' : 'opening'}`}>
                     {children}
                 </div>
             </div>
