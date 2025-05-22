@@ -65,12 +65,6 @@
     box-shadow: none;
 }
 
-.green-btn:disabled,
-.green-btn.disabled {
-    background-color: #b9c3ba;
-    color: #e7e7e7;
-}
-
 .white-btn:disabled,
 .white-btn.disabled {
     background-color: #f8f8f8;
@@ -78,7 +72,10 @@
 }
 
 .beige-btn:disabled,
-.beige-btn.disabled {
+.beige-btn.disabled,
+.green-btn:disabled,
+.green-btn.disabled
+{
     background-color: #c1c1c1;
     color: #757575;
 }
