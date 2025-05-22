@@ -1,4 +1,4 @@
-import React, {useCallback, useEffect, useMemo, useState} from "react";
+import {useCallback, useEffect, useMemo, useState} from "react";
 import {useParams, useNavigate} from "react-router-dom";
 import {useAuth} from "../../hooks/useAuth";
 import {Role} from "../../types/role";
@@ -279,6 +279,7 @@ const PresentationPage = () => {
                 <GreenButton
                     label="Приєднатися"
                     className="join-button-presentation"
+                    disabled={structureParts.length === 0}
                     onClick={() => navigate(`/presentation/${presentationId}/join`)}
                 />
             </div>
@@ -344,6 +345,7 @@ const PresentationPage = () => {
                                     <BeigeButton
                                         label="Перейти до монтажу"
                                         className="montage-btn"
+                                        disabled={Object.keys(groupedVideos).length === 0}
                                         onClick={() => handleMontageClick()}
                                     />
                                 )}
