@@ -31,7 +31,6 @@ export function usePresentationVideoFile(videoId: number | null) {
         return () => {
             if (videoUrl) URL.revokeObjectURL(videoUrl);
         };
-        // eslint-disable-next-line
     }, [fetchVideo]);
 
     return { videoUrl, loading, error };

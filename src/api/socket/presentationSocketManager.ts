@@ -1,4 +1,4 @@
-import socketClient from "../socketClient.ts";
+import { SocketClient } from "../socketClient";
 
 export enum PresentationEventType {
     NameChanged = "name_changed",
@@ -15,25 +15,31 @@ export interface PresentationEvent {
 }
 
 class PresentationSocketManager {
-    public connect(token: string) {
-        socketClient.connect(token);
+    private socketClient: SocketClient;
+
+    constructor(token: string) {
+        this.socketClient = new SocketClient(token);
     }
 
-    public subscribePresentation(presentationId: number) {
-        socketClient.emit("subscribe_presentation", { presentationId });
+    public subscribePresentation(presentationId: number): void {
+        this.socketClient.emit("subscribe_presentation", { presentationId });
     }
 
-    public onPresentationEvent(callback: (event: PresentationEvent) => void) {
-        socketClient.on("presentationEvent", callback);
+    public onPresentationEvent(callback: (event: PresentationEvent) => void): void {
+        this.socketClient.on("presentationEvent", callback);
     }
 
-    public offPresentationEvent(callback: (event: PresentationEvent) => void) {
-        socketClient.off("presentationEvent", callback);
+    public offPresentationEvent(callback: (event: PresentationEvent) => void): void {
+        this.socketClient.off("presentationEvent", callback);
     }
 
-    public disconnect() {
-        socketClient.disconnect();
+    public disconnect(): void {
+        this.socketClient.disconnect();
+    }
+
+    public getSocket() {
+        return this.socketClient.getSocket();
     }
 }
 
-export default new PresentationSocketManager();
+export default PresentationSocketManager;

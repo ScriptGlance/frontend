@@ -15,6 +15,8 @@ import PresentationPage from "./pages/presentation/PresentationPage.tsx";
 import {ProfileProvider} from "./hooks/ProfileContext.tsx";
 import InviteAcceptPage from "./pages/inviteAccept/InviteAcceptPage.tsx";
 import VideoPlayerPage from "./pages/videoPlayerPage/VideoPlayerPage.tsx";
+import PresentationEditTextPage from "./pages/presentationEditText/PresentationTextEditorPage.tsx";
+import TempStructurePage from "./pages/tempStructurePage/TempStructurePage.tsx";
 
 function App() {
     return (
@@ -77,9 +79,16 @@ function App() {
                         }
                     />
 
+                    <Route
+                        path="/presentation/:id/text"
+                        element={
+                            <ProtectedRoute role={Role.User}>
+                                <PresentationEditTextPage/>
+                            </ProtectedRoute>
+                        }
+                    />
                     <Route path="/invite/:code" element={<InviteAcceptPage/>}/>
                     <Route path="/video/:shareCode" element={<VideoPlayerPage />} />
-
 
                     <Route path="*" element={<NotFound/>}/>
                 </Routes>
