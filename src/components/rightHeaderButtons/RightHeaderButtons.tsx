@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { GreenButton } from "../appButton/AppButton";
 import RoundButton from "../roundButton/RoundButton";
 import { Avatar } from "../avatar/Avatar";
@@ -55,6 +55,8 @@ const RightHeaderButtons = ({
                 onClick={handleAvatarClick}
                 alt={profile?.first_name || "Користувач"}
                 size={42}
+                name={profile?.first_name || ""}
+                surname={profile?.last_name || ""}
             />
             <RoundButton
                 icon={<img src={logoutIcon} alt="Вихід" />}

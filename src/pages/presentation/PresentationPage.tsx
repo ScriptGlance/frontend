@@ -1,4 +1,4 @@
-import {useCallback, useEffect, useMemo, useState} from "react";
+import {useCallback, useEffect, useMemo, useRef, useState} from "react";
 import {useParams, useNavigate} from "react-router-dom";
 import {useAuth} from "../../hooks/useAuth";
 import {Role} from "../../types/role";
@@ -22,7 +22,6 @@ import RightHeaderButtons from "../../components/rightHeaderButtons/RightHeaderB
 import {GreenButton, BeigeButton} from "../../components/appButton/AppButton";
 import {Avatar} from "../../components/avatar/Avatar";
 import {useProfile} from "../../hooks/ProfileContext";
-import logo from "../../assets/logo.png";
 import editIcon from "../../assets/edit-icon.svg";
 import deleteIcon from "../../assets/delete-icon.svg";
 import timeIcon from "../../assets/time-icon.svg";
@@ -67,6 +66,12 @@ const PresentationPage = () => {
     const {logout} = useAuth();
     const {profile} = useProfile();
 
+    const [detailsLoadedOnce, setDetailsLoadedOnce] = useState(false);
+    const [participantsLoadedOnce, setParticipantsLoadedOnce] = useState(false);
+    const [structureLoadedOnce, setStructureLoadedOnce] = useState(false);
+    const [videosLoadedOnce, setVideosLoadedOnce] = useState(false);
+    const [configLoadedOnce, setConfigLoadedOnce] = useState(false);
+
     const {
         presentation,
         loading: presentationLoading,
@@ -110,8 +115,10 @@ const PresentationPage = () => {
 
     const [premiumModalOpen, setPremiumModalOpen] = useState(false);
 
+    const structureScrollRef = useRef<HTMLDivElement>(null);
 
-    const structureParts = structure?.structure?.filter((part) => part.text_preview) ?? [];
+
+    const structureParts = structure?.structure?.filter((part) => part.text_preview.trim()) ?? [];
 
     const handlePresentationEvent = useCallback((event: PresentationEvent) => {
         switch (event.event_type) {
@@ -124,9 +131,16 @@ const PresentationPage = () => {
             case PresentationEventType.VideosChanged:
                 refetchVideos();
                 break;
-            case PresentationEventType.TextChanged:
-                refetchStructure();
+            case PresentationEventType.TextChanged: {
+                const scrollEl = structureScrollRef.current;
+                const prevScrollTop = scrollEl?.scrollTop ?? 0;
+                refetchStructure().then(() => {
+                    if (scrollEl) {
+                        scrollEl.scrollTop = prevScrollTop;
+                    }
+                });
                 break;
+            }
             case PresentationEventType.JoinedUsersChanged:
                 refetchJoinedUsers();
                 break;
@@ -142,6 +156,37 @@ const PresentationPage = () => {
     }, [refetchDetails, refetchParticipants, refetchStructure, refetchVideos]);
 
     usePresentationSocket(presentationId, handlePresentationEvent);
+
+    useEffect(() => {
+        if (!presentationLoading && !detailsLoadedOnce) {
+            setDetailsLoadedOnce(true);
+        }
+    }, [presentationLoading]);
+
+    useEffect(() => {
+        if (!participantsLoading && !participantsLoadedOnce) {
+            setParticipantsLoadedOnce(true);
+        }
+    }, [participantsLoading]);
+
+    useEffect(() => {
+        if (!structureLoading && !structureLoadedOnce) {
+            setStructureLoadedOnce(true);
+        }
+    }, [structureLoading]);
+
+    useEffect(() => {
+        if (!videosLoading && !videosLoadedOnce) {
+            setVideosLoadedOnce(true);
+        }
+    }, [videosLoading]);
+
+    useEffect(() => {
+        if (!configLoading && !configLoadedOnce) {
+            setConfigLoadedOnce(true);
+        }
+    }, [configLoading]);
+
 
     const handleLogout = () => {
         logout(Role.User);
@@ -223,11 +268,11 @@ const PresentationPage = () => {
     };
 
     const isInitialLoading =
-        presentationLoading ||
-        participantsLoading ||
-        structureLoading ||
-        videosLoading ||
-        configLoading;
+        (!detailsLoadedOnce && presentationLoading) ||
+        (!participantsLoadedOnce && participantsLoading) ||
+        (!structureLoadedOnce && structureLoading) ||
+        (!videosLoadedOnce && videosLoading) ||
+        (!configLoadedOnce && configLoading);
 
     if (isInitialLoading) {
         return <div className="loading-container-presentation">Завантаження...</div>;
@@ -243,8 +288,8 @@ const PresentationPage = () => {
     return (
         <div className="presentation-page-main">
             <div className="presentation-header-presentation">
-                <Logo onClick={handleLogoClick} premium={profile?.has_premium} />
-                <RightHeaderButtons onLogout={handleLogout} />
+                <Logo onClick={handleLogoClick} premium={profile?.has_premium}/>
+                <RightHeaderButtons onLogout={handleLogout}/>
             </div>
             <div className="presentation-title-container-presentation">
                 <div className="presentation-title-section-presentation">
@@ -310,6 +355,9 @@ const PresentationPage = () => {
                                                 }
                                                 alt={`${participant.user.first_name} ${participant.user.last_name}`}
                                                 size={42}
+                                                name={participant.user.first_name}
+                                                surname={participant.user.last_name}
+                                                bgColor={participant.color}
                                             />
                                             <div className="participant-info-presentation">
                                                 <div className="participant-name-presentation">
@@ -419,10 +467,10 @@ const PresentationPage = () => {
                                 <BeigeButton
                                     label="Редагувати текст"
                                     className="edit-text-button-presentation"
-                                    onClick={() => navigate(`/presentation/${presentationId}/edit-text`)}
+                                    onClick={() => navigate(`/presentation/${presentationId}/text`)}
                                 />
                             </div>
-                            <div className="structure-scrollable-presentation">
+                            <div className="structure-scrollable-presentation" ref={structureScrollRef}>
                                 {structureParts.length === 0 ? (
                                     <div className="empty-presentation-block-hint">
                                         Тут зʼявиться зміст вашого виступу
@@ -456,6 +504,9 @@ const PresentationPage = () => {
                                                         }
                                                         alt={`${part.assignee.first_name} ${part.assignee.last_name}`}
                                                         size={42}
+                                                        name={part.assignee.first_name}
+                                                        surname={part.assignee.last_name}
+                                                        bgColor={participants.find(p => p.user.user_id === part.assignee.user_id)?.color}
                                                     />
                                                     <div className="assignee-name-presentation">
                                                         {part.assignee.first_name} {part.assignee.last_name}

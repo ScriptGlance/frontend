@@ -1,0 +1,129 @@
+
+.participants-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 1.5rem;
+    background-color: #eae9e3;
+    height: 90px;
+    flex-shrink: 0;
+    box-shadow: 0 3px 4px rgba(0, 0, 0, 0.15);
+    z-index: 10;
+}
+
+.participants-nav {
+    display: flex;
+    align-items: center;
+}
+
+.participants-presentation-name {
+    font-size: 20px;
+    font-weight: 550;
+    margin-left: 10px;
+}
+
+.participants-header-back {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 50%;
+    transition: background-color 0.2s;
+}
+
+.participants-header-back:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+.participants-back-icon {
+    width: 36px;
+    height: 36px;
+}
+
+.participants-header-logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.participants-header-logo img {
+    height: 32px;
+}
+
+.participants-header-users {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.header-user-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background-size: cover;
+    background-position: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 500;
+    font-size: 14px;
+    flex-shrink: 0;
+    border: 2px solid white;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    transition-duration: 0.2s;
+}
+
+.header-user-avatar:hover {
+    transform: scale(1.1);
+}
+
+.header-user-avatar.small {
+    width: 28px;
+    height: 28px;
+    font-size: 12px;
+}
+
+.header-user-avatar.mini {
+    width: 20px;
+    height: 20px;
+    font-size: 9px;
+}
+
+.avatar-tooltip-wrapper {
+    position: relative;
+    display: inline-block;
+}
+
+.avatar-tooltip {
+    visibility: hidden;
+    opacity: 0;
+    width: max-content;
+    max-width: 250px;
+    background-color: #222;
+    color: #fff;
+    text-align: center;
+    border-radius: 7px;
+    padding: 6px 14px;
+    position: absolute;
+    z-index: 20;
+    left: 50%;
+    top: 110%;
+    transform: translateX(-50%);
+    font-size: 13px;
+    white-space: nowrap;
+    pointer-events: none;
+    transition: opacity 0.2s;
+    box-shadow: 0 4px 18px rgba(0,0,0,0.11);
+}
+
+.avatar-tooltip-wrapper:hover .avatar-tooltip {
+    visibility: visible;
+    opacity: 1;
+}
+
+.avatar-tooltip-wrapper:last-child .avatar-tooltip {
+    left: 100%;
+    transform: translateX(-100%);
+}

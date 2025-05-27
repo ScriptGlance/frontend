@@ -16,7 +16,7 @@ export function getPartDuration(
     if (showRange && max > min) {
         return `~${min}-${max} ${pluralizeUkrainian(max, ["хвилина", "хвилини", "хвилин"])}`;
     } else if (minWPM) {
-        return `~${max} ${pluralizeUkrainian(max, ["хвилина", "хвилини", "хвилин"])}`;
+        return `${max > 0 ? '~' : ''}${max} ${pluralizeUkrainian(max, ["хвилина", "хвилини", "хвилин"])}`;
     }
     return "";
 }
