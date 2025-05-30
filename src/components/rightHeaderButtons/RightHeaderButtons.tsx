@@ -1,26 +1,28 @@
-import React, { useState } from "react";
-import { GreenButton } from "../appButton/AppButton";
+import {useState} from "react";
+import {GreenButton} from "../appButton/AppButton";
 import RoundButton from "../roundButton/RoundButton";
-import { Avatar } from "../avatar/Avatar";
+import {Avatar} from "../avatar/Avatar";
 import chatIcon from "../../assets/chat.svg";
 import logoutIcon from "../../assets/logout.svg";
-
 import './RightHeaderButtons.css';
-import { useProfile } from "../../hooks/ProfileContext.tsx";
+import {useProfile} from "../../hooks/ProfileContext.tsx";
 import UpdateProfileModal from "../modals/updateProfile/UpdateProfileModal.tsx";
 import PremiumSubscriptionModal from "../modals/subscriptionStatus/SubscriptionStatusModal.tsx";
 import BuySubscriptionModal from "../modals/buySubscription/BuySubscriptionModal.tsx";
+import {Role} from "../../types/role.ts";
 
 interface RightHeaderButtonsProps {
     onChat?: () => void;
     onLogout?: () => void;
+    role?: Role;
 }
 
 const RightHeaderButtons = ({
                                 onChat,
                                 onLogout,
+                                role = Role.User,
                             }: RightHeaderButtonsProps) => {
-    const { profile, updateProfile, loading } = useProfile();
+    const {profile, updateProfile, loading} = useProfile();
     const [modalOpen, setModalOpen] = useState(false);
     const [premiumModalOpen, setPremiumModalOpen] = useState(false);
 
@@ -39,17 +41,17 @@ const RightHeaderButtons = ({
 
     return (
         <div className="header-buttons">
-            <GreenButton
+            {role === Role.User && <GreenButton
                 label={profile?.has_premium ? "Керувати підпискою" : "Купити преміум"}
                 className="premium-btn"
                 onClick={handlePremiumClick}
-            />
-            <RoundButton
-                icon={<img src={chatIcon} alt="Чат" />}
+            />}
+            {role === Role.User && <RoundButton
+                icon={<img src={chatIcon} alt="Чат"/>}
                 ariaLabel="Чат"
                 className="round-btn"
                 onClick={onChat}
-            />
+            />}
             <Avatar
                 src={profile?.avatar ? import.meta.env.VITE_APP_API_BASE_URL + profile.avatar : null}
                 onClick={handleAvatarClick}
@@ -57,7 +59,7 @@ const RightHeaderButtons = ({
                 size={42}
             />
             <RoundButton
-                icon={<img src={logoutIcon} alt="Вихід" />}
+                icon={<img src={logoutIcon} alt="Вихід"/>}
                 ariaLabel="Вихід"
                 className="round-btn"
                 onClick={onLogout}

@@ -244,7 +244,6 @@ const CustomVideoPlayer: React.FC<CustomVideoPlayerProps> = ({
             onClick={handleUserActive}
             onKeyDown={handleUserActive}
         >
-            {/* HEADER */}
             {showHeader && (
                 <div className={`cvp-header${controlsVisible ? '' : ' hidden'}`}>
                     <div className="cvp-title-dates-block">
@@ -259,7 +258,6 @@ const CustomVideoPlayer: React.FC<CustomVideoPlayerProps> = ({
                 </div>
             )}
 
-            {/* VIDEO */}
             <video
                 ref={videoRef}
                 src={videoUrl}
@@ -276,7 +274,6 @@ const CustomVideoPlayer: React.FC<CustomVideoPlayerProps> = ({
                 tabIndex={-1}
             />
 
-            {/* FOOTER */}
             {showFooter && (
                 <div className={`cvp-footer${controlsVisible ? '' : ' hidden'}`}>
                     <div
@@ -345,8 +342,7 @@ const CustomVideoPlayer: React.FC<CustomVideoPlayerProps> = ({
             )
             }
         </div>
-    )
-        ;
+    );
 };
 
 export default CustomVideoPlayer;

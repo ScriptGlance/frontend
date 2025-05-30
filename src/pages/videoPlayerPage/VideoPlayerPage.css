@@ -25,7 +25,6 @@
     position: relative;
 }
 
-/* Better responsive video handling */
 .video-player-container .custom-video-player-root {
     width: 100%;
     height: 100%;
@@ -35,16 +34,14 @@
     position: relative;
 }
 
-/* Video element styling with better aspect ratio handling */
 .video-player-container .cvp-video {
     max-width: 100% !important;
-    max-height: 100vh !important; /* Account for controls */
+    max-height: 100vh !important;
     height: auto !important;
     object-fit: contain;
     margin: auto;
 }
 
-/* Ensure controls have proper z-index and positioning */
 .video-player-container .cvp-header {
     position: absolute;
     top: 0;
@@ -63,12 +60,10 @@
     z-index: 10;
 }
 
-/* Maintain proper control spacing */
 .video-player-container .cvp-controls-row {
     padding: 0 20px;
 }
 
-/* Message styling */
 .video-player-message {
     color: #fff;
     text-align: center;
