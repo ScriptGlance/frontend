@@ -3,6 +3,7 @@ import { io, Socket } from "socket.io-client";
 class SocketClient {
     private static instance: SocketClient;
     private socket: Socket | null = null;
+    private connectedUrl: string | null = null;
 
     private constructor() {}
 
@@ -13,20 +14,22 @@ class SocketClient {
         return SocketClient.instance;
     }
 
-    public connect(token: string) {
+    public connect(token: string, url?: string) {
         if (this.socket) {
             console.log("[SocketClient] Already connected.");
             return this.socket;
         }
-        console.log("[SocketClient] Connecting to:", import.meta.env.VITE_APP_BASE_SOCKET_URL);
-        this.socket = io(import.meta.env.VITE_APP_BASE_SOCKET_URL, {
+        const socketUrl = url || import.meta.env.VITE_APP_BASE_SOCKET_URL;
+        this.connectedUrl = socketUrl;
+        console.log("[SocketClient] Connecting to:", socketUrl);
+        this.socket = io(socketUrl, {
             transports: ["websocket"],
             autoConnect: true,
             auth: { token: `${token}` },
         });
 
         this.socket.on("connect", () => {
-            console.log("[SocketClient] Connected:", this.socket?.id);
+            console.log("[SocketClient] Connected:", this.socket?.id, "to", this.connectedUrl);
         });
 
         this.socket.on("disconnect", (reason: string) => {
@@ -48,6 +51,7 @@ class SocketClient {
         } else {
             console.log("[SocketClient] No socket to disconnect.");
         }
+        this.connectedUrl = null;
     }
 
     public on(event: string, callback: (...args: any[]) => void) {

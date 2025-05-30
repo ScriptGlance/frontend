@@ -15,6 +15,7 @@ import PresentationPage from "./pages/presentation/PresentationPage.tsx";
 import {ProfileProvider} from "./hooks/ProfileContext.tsx";
 import InviteAcceptPage from "./pages/inviteAccept/InviteAcceptPage.tsx";
 import VideoPlayerPage from "./pages/videoPlayerPage/VideoPlayerPage.tsx";
+import ModeratorChatPage from "./pages/chat/ModeratorChatPage.tsx";
 
 function App() {
     return (
@@ -73,6 +74,15 @@ function App() {
                         element={
                             <ProtectedRoute role={Role.User}>
                                 <PresentationPage/>
+                            </ProtectedRoute>
+                        }
+                    />
+
+                    <Route
+                        path="/moderator/chats"
+                        element={
+                            <ProtectedRoute role={Role.Moderator}>
+                                <ModeratorChatPage/>
                             </ProtectedRoute>
                         }
                     />
