@@ -4,7 +4,7 @@ import volumeLowIcon from "../../assets/volume-low.svg";
 import volumeHighIcon from "../../assets/volume-high.svg";
 import playIcon from "../../assets/play-icon.svg";
 import pauseIcon from "../../assets/pause-icon.svg";
-import crossIcon from "../../assets/cross-icon.svg";
+import crossIcon from "../../assets/cross-icon-white.svg";
 import "./CustomVideoPlayer.css";
 
 export interface CustomVideoPlayerProps {
@@ -12,9 +12,9 @@ export interface CustomVideoPlayerProps {
     title?: string;
     author?: string;
     dates?: string;
-    duration?: number; // in seconds
-    onClose?: () => void; // Optional, for modal use
-    actions?: React.ReactNode; // for extra controls (share/download/delete)
+    duration?: number;
+    onClose?: () => void;
+    actions?: React.ReactNode;
     autoPlay?: boolean;
     showHeader?: boolean;
     showFooter?: boolean;
@@ -33,7 +33,6 @@ const VOLUME_SLIDER_HIDE_DELAY = 1000;
 const CustomVideoPlayer: React.FC<CustomVideoPlayerProps> = ({
                                                                  videoUrl,
                                                                  title,
-                                                                 author,
                                                                  dates,
                                                                  duration,
                                                                  onClose,
@@ -60,7 +59,6 @@ const CustomVideoPlayer: React.FC<CustomVideoPlayerProps> = ({
     const videoDurationInSeconds = duration || 0;
     const progressPercentage = videoDurationInSeconds ? (current / videoDurationInSeconds) * 100 : 0;
 
-    // --- Show/hide controls with fade animation
     const showControls = () => {
         setControlsVisible(true);
         if (hideTimeout.current) window.clearTimeout(hideTimeout.current);
@@ -79,7 +77,6 @@ const CustomVideoPlayer: React.FC<CustomVideoPlayerProps> = ({
             if (hideTimeout.current) window.clearTimeout(hideTimeout.current);
             if (volumeHideTimeout.current) window.clearTimeout(volumeHideTimeout.current);
         };
-        // eslint-disable-next-line
     }, [videoUrl, playing]);
 
     useEffect(() => {
