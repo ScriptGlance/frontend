@@ -1,0 +1,136 @@
+.draggable-reassign-modal {
+    width: 360px;
+    background: #fff;
+    border-radius: 26px;
+    box-shadow: 0 6px 28px 0 #0002;
+    overflow: hidden;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    z-index: 3000;
+}
+
+.draggable-reassign-modal__handle {
+    margin-top: 10px;
+    padding: 12px 20px;
+    border-radius: 20px 20px 0 0;
+    cursor: grab;
+    font-size: 20px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    background: #fff;
+    user-select: none;
+}
+
+.draggable-reassign-modal__handle img {
+    width: 40px;
+    height: 40px;
+    pointer-events: none;
+}
+
+.reassign-title {
+    font-size: 22px;
+    color: #e3b353;
+    font-weight: 500;
+    margin: 0;
+}
+
+.draggable-reassign-modal__content {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    padding-top: 20px;
+    min-height: 0;
+}
+
+.draggable-reassign-modal__reason {
+    color: #000;
+    font-weight: 500;
+    font-size: 18px;
+    text-align: center;
+    margin-bottom: 7px;
+    padding: 0 12px;
+}
+
+.draggable-reassign-modal__part {
+    color: #333;
+    font-size: 16px;
+    margin-bottom: 18px;
+    padding: 0 12px;
+}
+
+.draggable-reassign-modal__candidates {
+    flex: 1 1 auto;
+    margin: 20px 0;
+    display: flex;
+    flex-direction: column;
+    align-content: center;
+    justify-content: flex-start;
+    max-height: 180px;
+    overflow-y: auto;
+    min-height: 0;
+    padding: 0 0 4px 0;
+}
+
+.draggable-reassign-modal__candidate {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 45px;
+    cursor: pointer;
+    transition: background .16s;
+}
+
+.draggable-reassign-modal__candidate.selected {
+    background: #d3ddd7;
+}
+
+.candidate-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.candidate-info {
+    flex: 1;
+}
+
+.candidate-subtitle {
+    font-size: 14px;
+    color: #9493a6;
+}
+
+.draggable-reassign-modal__confirm-wrapper {
+    width: 100%;
+    text-align: center;
+    margin-bottom: 20px;
+    margin-top: 8px;
+    padding: 0 12px;
+}
+
+.draggable-reassign-modal__confirm {
+    padding: 5px 25px;
+    border-radius: 12px;
+    background: #5E7158;
+    color: #fff;
+    font-weight: 400;
+    font-size: 15px;
+    border: none;
+    cursor: pointer;
+    transition: background 0.16s;
+}
+
+.draggable-reassign-modal__confirm:hover {
+    background: #4e5c4a;
+}
+
+.draggable-reassign-modal__confirm:disabled {
+    background: #dadada;
+    color: #a8a8a8;
+    cursor: not-allowed;
+}

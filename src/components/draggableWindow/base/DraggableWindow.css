@@ -1,0 +1,76 @@
+.draggable-window {
+    background: #fff;
+    border-radius: 20px;
+    box-shadow: 0 6px 28px 0 #0002;
+    transition: box-shadow 0.2s;
+    padding: 0;
+    min-width: 320px;
+    min-height: 80px;
+    position: fixed;
+    z-index: 3000;
+}
+.draggable-window.dragging {
+    box-shadow: 0 10px 40px 0 #0003;
+    cursor: grabbing;
+}
+.draggable-window__icon {
+    user-select: none;
+    font-size: 26px;
+}
+.draggable-window__content {
+    padding: 0;
+}
+
+.draggable-window {
+    background: #fff;
+    border-radius: 20px;
+    box-shadow: 0 6px 28px 0 #0002;
+    transition:
+            box-shadow 0.2s,
+            transform 0.2s cubic-bezier(.32,1.35,.55,1.15),
+            opacity 0.2s;
+    padding: 0;
+    min-width: 320px;
+    min-height: 80px;
+    position: fixed;
+    z-index: 3000;
+    opacity: 0;
+    transform: scale(0.92) translateY(10px);
+    pointer-events: all;
+}
+
+.draggable-window--open {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+}
+
+.draggable-window--close {
+    opacity: 0;
+    transform: scale(0.92) translateY(10px);
+    pointer-events: none;
+}
+
+.draggable-window.dragging {
+    box-shadow: 0 10px 40px 0 #0003;
+    cursor: grabbing;
+}
+.draggable-window__handle {
+    height: 34px;
+    background: #f5f5f5;
+    border-radius: 20px 20px 0 0;
+    display: flex;
+    align-items: center;
+    cursor: grab;
+    padding-left: 20px;
+    font-size: 22px;
+    letter-spacing: 2px;
+    color: #bbb;
+    border-bottom: 1px solid #f1f1f1;
+}
+.draggable-window__icon {
+    user-select: none;
+    font-size: 26px;
+}
+.draggable-window__content {
+    padding: 0;
+}

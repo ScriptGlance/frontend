@@ -1,20 +1,32 @@
-import { useEffect } from "react";
-import { Role } from "../types/role.ts";
-import { useAuth } from "./useAuth.ts";
-import PaymentsSocketManager, {PaymentsEvent} from "../api/socket/paymentsSocketManager.ts";
+import { useEffect, useRef } from "react";
+import { useAuth } from "./useAuth";
+import { Role } from "../types/role";
+import {PaymentsEvent, PaymentsSocketManager} from "../api/socket/paymentsSocketManager.ts";
 
 export function usePaymentsSocket(onEvent: (event: PaymentsEvent) => void) {
     const { getToken } = useAuth();
     const token = getToken(Role.User) || "";
 
+    const socketManagerRef = useRef<PaymentsSocketManager | null>(null);
+    const stableCallbackRef = useRef(onEvent);
+
     useEffect(() => {
-        PaymentsSocketManager.connect(token);
-        PaymentsSocketManager.subscribePayments();
-        PaymentsSocketManager.onPaymentsEvent(onEvent);
+        stableCallbackRef.current = onEvent;
+    }, [onEvent]);
+
+    useEffect(() => {
+        const manager = new PaymentsSocketManager(token);
+        socketManagerRef.current = manager;
+
+        const handler = (event: PaymentsEvent) => stableCallbackRef.current(event);
+
+        manager.subscribePayments();
+        manager.onPaymentsEvent(handler);
 
         return () => {
-            PaymentsSocketManager.offPaymentsEvent(onEvent);
-            PaymentsSocketManager.disconnect();
+            manager.offPaymentsEvent(handler);
+            manager.disconnect();
+            socketManagerRef.current = null;
         };
-    }, [onEvent, token]);
+    }, [token]);
 }
