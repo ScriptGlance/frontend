@@ -11,7 +11,6 @@ import ResetPasswordPage from "./pages/forgotPassword/ResetPasswordPage.tsx";
 import {Role} from "./types/role.ts";
 import ProtectedRoute from "./components/route/ProtectedRoute.tsx";
 import UserDashboardPage from "./pages/userDashboard/UserDashboardPage.tsx";
-import PresentationPage from "./pages/presentation/PresentationPage.tsx";
 import {ProfileProvider} from "./hooks/ProfileContext.tsx";
 import InviteAcceptPage from "./pages/inviteAccept/InviteAcceptPage.tsx";
 import VideoPlayerPage from "./pages/videoPlayerPage/VideoPlayerPage.tsx";
@@ -21,6 +20,7 @@ import PresentationEditTextPage from "./pages/presentationEditText/PresentationT
 import TeleprompterPage from "./pages/teleprompter/TeleprompterPage.tsx";
 import {useAuth} from "./hooks/useAuth.ts";
 import {VideoUploadQueueProvider} from "./hooks/VideoUploadQueueProvider.tsx";
+import PresentationPage from "./pages/presentation/PresentationPage.tsx";
 
 function App() {
     const {getToken} = useAuth();
@@ -90,6 +90,15 @@ function App() {
                             element={
                                 <ProtectedRoute role={Role.Admin}>
                                     <AdminDashboardPage/>
+                                </ProtectedRoute>
+                            }
+                        />
+
+                        <Route
+                            path="/presentation/:id"
+                            element={
+                                <ProtectedRoute role={Role.User}>
+                                    <PresentationPage/>
                                 </ProtectedRoute>
                             }
                         />
