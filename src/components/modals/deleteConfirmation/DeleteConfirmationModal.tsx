@@ -1,7 +1,7 @@
-import React, { useState } from "react";
+import React, {useState} from "react";
 import BaseModal from "../base/BaseModal";
-import { RedButton, GrayButton } from "../../appButton/AppButton";
-import { AppInput } from "../../appInput/AppInput";
+import {RedButton, GrayButton} from "../../appButton/AppButton";
+import {AppInput} from "../../appInput/AppInput";
 import "./DeleteConfirmationModal.css";
 
 interface ConfirmationModalProps {
@@ -13,6 +13,7 @@ interface ConfirmationModalProps {
     confirmationInputValue?: string;
     cancelButtonText?: string;
     confirmButtonText?: string;
+    reloadAfterDelete?: boolean;
 }
 
 const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
@@ -24,6 +25,7 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
                                                                  confirmationInputValue,
                                                                  cancelButtonText = "Ні",
                                                                  confirmButtonText = "Так",
+                                                                 reloadAfterDelete = true,
                                                              }) => {
     const [inputValue, setInputValue] = useState("");
     const [error, setError] = useState<string | null>(null);
@@ -42,7 +44,9 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
         setError(null);
         onConfirm();
         reset();
-        window.location.reload();
+        if (reloadAfterDelete) {
+            window.location.reload();
+        }
     };
 
     return (

@@ -1,4 +1,5 @@
-import axios, { AxiosError, AxiosInstance, AxiosRequestConfig } from 'axios';
+import axios, {AxiosError, AxiosInstance, AxiosRequestConfig} from 'axios';
+import {jwtDecode} from 'jwt-decode';
 
 export class ApiClient {
     private static instance: ApiClient;
@@ -9,22 +10,43 @@ export class ApiClient {
             baseURL: import.meta.env.VITE_APP_API_BASE_URL,
         });
 
-        this.axios.interceptors.request.use(
-            (config) => {
-                const token = localStorage.getItem(import.meta.env.VITE_APP_TOKEN_KEY || 'auth_token');
-                if (token && config.headers) {
-                    config.headers.Authorization = `Bearer ${token}`;
-                }
-                return config;
-            },
-            (error) => Promise.reject(error)
-        );
-
         this.axios.interceptors.response.use(
             (response) => response,
             (error: AxiosError) => {
                 if (error.response?.status === 401) {
-                    localStorage.removeItem(import.meta.env.VITE_APP_TOKEN_KEY || 'auth_token');
+                    let role = 'user';
+
+                    const authHeader =
+                        error.config?.headers?.Authorization ||
+                        error.config?.headers?.authorization;
+
+                    let token: string | undefined = undefined;
+
+                    if (typeof authHeader === 'string') {
+                        token = authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : undefined;
+                    } else if (Array.isArray(authHeader) && typeof authHeader[0] === 'string') {
+                        token = authHeader[0].startsWith('Bearer ') ? authHeader[0].split(' ')[1] : undefined;
+                    }
+
+                    if (token) {
+                        try {
+                            const payload: { role?: string  } = jwtDecode(token);
+                            if (payload && payload.role) {
+                                role = payload.role;
+                            }
+                        } catch (e) {}
+                    }
+
+                    if (role === 'admin') {
+                        localStorage.removeItem('admin_token');
+                        window.location.href = '/admin/login';
+                    } else if (role === 'moderator') {
+                        localStorage.removeItem('moderator_token');
+                        window.location.href = '/moderator/login';
+                    } else {
+                        localStorage.removeItem(import.meta.env.VITE_APP_TOKEN_KEY || 'auth_token');
+                        window.location.href = '/login';
+                    }
                 }
                 return Promise.reject(error);
             }
@@ -41,7 +63,7 @@ export class ApiClient {
     public async get<T = any>(url: string, config?: AxiosRequestConfig): Promise<T> {
         const mergedConfig = {
             ...config,
-            headers: { ...(config?.headers || {}) },
+            headers: {...(config?.headers || {})},
         };
         const response = await this.axios.get<T>(url, mergedConfig);
         return response.data;
@@ -50,7 +72,7 @@ export class ApiClient {
 
     public async post<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> {
         const mergedConfig = {
-            headers: { 'Content-Type': 'application/json', ...(config?.headers || {}) },
+            headers: {'Content-Type': 'application/json', ...(config?.headers || {})},
             ...config
         };
         const response = await this.axios.post<T>(url, data, mergedConfig);
@@ -59,7 +81,7 @@ export class ApiClient {
 
     public async put<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> {
         const mergedConfig = {
-            headers: { 'Content-Type': 'application/json', ...(config?.headers || {}) },
+            headers: {'Content-Type': 'application/json', ...(config?.headers || {})},
             ...config
         };
         const response = await this.axios.put<T>(url, data, mergedConfig);
@@ -68,7 +90,7 @@ export class ApiClient {
 
     public async delete<T = any>(url: string, config?: AxiosRequestConfig): Promise<T> {
         const mergedConfig = {
-            headers: { 'Content-Type': 'application/json', ...(config?.headers || {}) },
+            headers: {'Content-Type': 'application/json', ...(config?.headers || {})},
             ...config
         };
         const response = await this.axios.delete<T>(url, mergedConfig);

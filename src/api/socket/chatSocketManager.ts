@@ -1,4 +1,4 @@
-import socketClient from "../socketClient.ts";
+import {SocketClient} from "../socketClient.ts";
 
 export enum ChatEventType {
     NewMessage = "new_message",
@@ -25,62 +25,63 @@ export interface AssignmentChangeEvent {
 type EventCallback<T> = (event: T) => void;
 
 class ChatSocketManager {
-    public connect(token: string) {
-        socketClient.connect(token, import.meta.env.VITE_APP_BASE_SOCKET_URL
-        +"/chats");
+    private socketClient: SocketClient;
+
+    constructor(token: string) {
+        this.socketClient = new SocketClient(token, `${import.meta.env.VITE_APP_BASE_SOCKET_URL}/chats`);
     }
 
     public joinUserChat() {
-        socketClient.emit("join_user_chat");
+        this.socketClient.emit("join_user_chat");
     }
 
     public onUserNewMessage(callback: EventCallback<NewMessageEvent>) {
-        socketClient.on(ChatEventType.NewMessage, callback);
+        this.socketClient.on(ChatEventType.NewMessage, callback);
     }
 
     public offUserNewMessage(callback: EventCallback<NewMessageEvent>) {
-        socketClient.off(ChatEventType.NewMessage, callback);
+        this.socketClient.off(ChatEventType.NewMessage, callback);
     }
 
     public onUserChatClosed(callback: () => void) {
-        socketClient.on(ChatEventType.ChatClosed, callback);
+        this.socketClient.on(ChatEventType.ChatClosed, callback);
     }
 
     public offUserChatClosed(callback: () => void) {
-        socketClient.off(ChatEventType.ChatClosed, callback);
+        this.socketClient.off(ChatEventType.ChatClosed, callback);
     }
 
     public joinModeratorChats() {
-        socketClient.emit("join_moderator_chat");
+        this.socketClient.emit("join_moderator_chat");
     }
 
     public onModeratorNewMessage(callback: EventCallback<NewMessageEvent>) {
-        socketClient.on(ChatEventType.NewMessage, callback);
+        this.socketClient.on(ChatEventType.NewMessage, callback);
     }
 
     public offModeratorNewMessage(callback: EventCallback<NewMessageEvent>) {
-        socketClient.off(ChatEventType.NewMessage, callback);
+        this.socketClient.off(ChatEventType.NewMessage, callback);
     }
 
     public onModeratorChatClosed(callback: (chat?: any) => void) {
-        socketClient.on(ChatEventType.ChatClosed, callback);
+        this.socketClient.on(ChatEventType.ChatClosed, callback);
     }
 
     public offModeratorChatClosed(callback: (chat?: any) => void) {
-        socketClient.off(ChatEventType.ChatClosed, callback);
+        this.socketClient.off(ChatEventType.ChatClosed, callback);
     }
 
     public onAssignmentChange(callback: EventCallback<AssignmentChangeEvent>) {
-        socketClient.on(ChatEventType.AssignmentChange, callback);
+        this.socketClient.on(ChatEventType.AssignmentChange, callback);
     }
 
     public offAssignmentChange(callback: EventCallback<AssignmentChangeEvent>) {
-        socketClient.off(ChatEventType.AssignmentChange, callback);
+        this.socketClient.off(ChatEventType.AssignmentChange, callback);
     }
 
     public disconnect() {
-        socketClient.disconnect();
+        this.socketClient.disconnect();
     }
 }
 
-export default new ChatSocketManager();
+export default ChatSocketManager;
