@@ -1,7 +1,8 @@
 .app-logo-block {
-    display: flex;
-    flex-direction: column;
+    display: inline-block;
+    position: relative;
     padding: 16px;
+    top: -5px;
 }
 
 .app-logo-block .logo {
@@ -9,10 +10,12 @@
 }
 
 .logo-label {
+    position: absolute;
+    left: 107px;
+    transform: translateX(-50%);
+    bottom: 8px;
     color: #536B5B;
-    position: relative;
-    top: -20px;
-    left: 48px;
     font-weight: 600;
+    font-size: 19px;
+    pointer-events: none;
 }
-

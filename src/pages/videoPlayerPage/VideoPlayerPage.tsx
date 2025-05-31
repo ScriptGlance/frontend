@@ -1,5 +1,5 @@
 import React, {useEffect, useState} from "react";
-import {useParams, useNavigate} from "react-router-dom";
+import {useParams} from "react-router-dom";
 import CustomVideoPlayer from "../../components/customVideoPlayer/CustomVideoPlayer.tsx";
 import {useSharedVideo} from "../../hooks/usePresentationVideo.ts";
 import "./VideoPlayerPage.css";
@@ -7,7 +7,6 @@ import NotFound from "../notFound/NotFound.tsx";
 
 const VideoPlayerPage: React.FC = () => {
     const {shareCode} = useParams<{ shareCode: string }>();
-    const navigate = useNavigate();
     const {videoUrl, loading, error, fetchSharedVideo, cleanupVideoUrl} = useSharedVideo(shareCode ?? null);
     const [videoDuration, setVideoDuration] = useState<number | undefined>(undefined);
 
