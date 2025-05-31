@@ -9,7 +9,7 @@ export interface ModeratorChatListItem {
     last_message: string;
     last_message_sent_date: string;
     unread_messages_count: number;
-    avatar?: string;
+    avatar?: string | null;
 }
 
 interface ChatMessage {
@@ -37,11 +37,6 @@ interface ChatsResponse {
     error: boolean;
 }
 
-interface MessagesResponse {
-    data: ChatMessage[];
-    error: boolean;
-}
-
 const DEFAULT_ERROR_MESSAGE = "Щось пішло не так";
 
 export function useModeratorChatMessages(chatId: number | null, params: GetUserChatMessagesParams = {}) {
@@ -52,7 +47,7 @@ export function useModeratorChatMessages(chatId: number | null, params: GetUserC
     const abortControllerRef = useRef<AbortController | null>(null);
     const lastFetchTimeRef = useRef<number>(0);
 
-    const fetchData = useCallback(async (force: boolean = false) => {
+    const fetchData = useCallback(async () => {
         if (!chatId) {
             setMessages([]);
             return;
@@ -108,7 +103,7 @@ export function useModeratorChatMessages(chatId: number | null, params: GetUserC
         };
     }, [chatId]);
 
-    const refetch = useCallback(() => fetchData(true), [fetchData]);
+    const refetch = useCallback(() => fetchData(), [fetchData]);
 
     return { messages, loading, error, refetch };
 }
