@@ -1,0 +1,97 @@
+.invite-accept-page {
+    min-height: 100vh;
+    background: linear-gradient(120deg, #eae9e3 70%, #f6f4ed 100%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-family: "Montserrat", sans-serif;
+    padding: 0 12px;
+}
+
+.invite-accept-card {
+    background: #fff;
+    border-radius: 24px;
+    box-shadow: 0 4px 32px 0 rgba(90,100,75,0.12);
+    padding: 40px 38px 34px 38px;
+    max-width: 500px;
+    width: 100%;
+    text-align: center;
+    margin: 0 auto;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.invite-accept-title {
+    font-size: 26px;
+    font-weight: 500;
+    color: #5e7158;
+    margin-bottom: 12px;
+    letter-spacing: -0.5px;
+    margin-top: 7px;
+}
+
+.invite-accept-desc {
+    color: #595d75;
+    font-size: 17px;
+    margin-bottom: 26px;
+    margin-top: 4px;
+    line-height: 1.5;
+}
+
+.invite-accept-success {
+    color: #50703a;
+    font-size: 18px;
+    font-weight: 500;
+    margin-bottom: 26px;
+    letter-spacing: -0.2px;
+}
+
+.invite-accept-error {
+    color: #d93025;
+    background: #fff1f0;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 500;
+    margin-bottom: 24px;
+    padding: 12px 8px 10px 8px;
+    line-height: 1.45;
+}
+
+.invite-accept-loading {
+    color: #657759;
+    background: #f6f6f2;
+    font-size: 17px;
+    margin-bottom: 26px;
+    border-radius: 10px;
+    padding: 12px 8px 10px 8px;
+}
+
+.invite-accept-card .app-btn {
+    margin-top: 4px;
+    min-width: 150px;
+    font-size: 16px;
+    border-radius: 11px;
+    font-weight: 400;
+    letter-spacing: 0;
+    box-shadow: 0 2px 6px 0 rgba(80,120,80,0.04);
+    transition: background 0.16s, color 0.16s;
+}
+
+@media (max-width: 600px) {
+    .invite-accept-card {
+        padding: 22px 5vw 16px 5vw;
+        max-width: 98vw;
+    }
+    .invite-accept-title {
+        font-size: 19px;
+    }
+    .invite-accept-success,
+    .invite-accept-error,
+    .invite-accept-loading {
+        font-size: 15px;
+    }
+}

@@ -1,0 +1,21 @@
+.app-logo-block {
+    display: inline-block;
+    position: relative;
+    padding: 16px;
+    top: -5px;
+}
+
+.app-logo-block .logo {
+    padding: 0;
+}
+
+.logo-premium-label {
+    position: absolute;
+    left: 107px;
+    transform: translateX(-50%);
+    bottom: 8px;
+    color: #536B5B;
+    font-weight: 600;
+    font-size: 19px;
+    pointer-events: none;
+}

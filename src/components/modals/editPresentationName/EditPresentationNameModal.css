@@ -1,0 +1,52 @@
+.edit-presentation-name-title {
+    color: #5e7158;
+    font-size: 22px;
+    font-weight: 600;
+    margin-bottom: 18px;
+    text-align: center;
+    letter-spacing: -0.3px;
+}
+
+.edit-presentation-name-input {
+    margin-bottom: 14px;
+    font-size: 16px;
+    border-radius: 10px;
+}
+
+.edit-presentation-name-error {
+    color: #d93025;
+    font-size: 14px;
+    margin-bottom: 10px;
+    margin-top: -7px;
+    font-weight: 500;
+}
+
+.edit-presentation-name-actions {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 0;
+}
+
+@media (max-width: 500px) {
+    .edit-presentation-name-modal {
+        min-width: 0;
+        width: 97vw;
+        padding: 16px 3vw 12px 3vw;
+    }
+    .edit-presentation-name-title {
+        font-size: 17px;
+    }
+}
+
+.edit-presentation-name-input {
+    font-size: 16px;
+    border-radius: 10px;
+    height: 40px;
+    padding-left: 14px;
+    padding-right: 14px;
+}
+
+.edit-presentation-name-button {
+    width: 50% !important;
+}

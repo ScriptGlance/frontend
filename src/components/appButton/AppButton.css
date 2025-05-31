@@ -1,0 +1,87 @@
+.app-btn {
+    border: none;
+    border-radius: 10px;
+    padding: 8px 16px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    color: #45515C;
+    text-align: center;
+    font-size: 13px;
+    font-style: normal;
+    font-weight: 500;
+    background-color: #fff;
+}
+
+.white-btn {
+    color: #45515c;
+    background-color: #fff;
+}
+
+.white-btn:hover {
+    background-color: #f0f0f0;
+}
+
+.green-btn {
+    background-color: #5e7158;
+    color: #ffffff;
+}
+
+.green-btn:hover {
+    background-color: #4a5b47;
+}
+
+.beige-btn {
+    background-color: #e5d6b8;
+    color: #45515c;
+}
+
+.beige-btn:hover {
+    background-color: #d1c6a8;
+}
+
+.gray-btn {
+    background-color: #e3e4ea;
+    color: #000;
+}
+
+.gray-btn:hover {
+    background-color: #babdc8;
+}
+
+.red-btn {
+    background-color: #EA4335;
+    color: #ffffff;
+}
+
+.red-btn:hover {
+    background-color: #c83f31;
+}
+
+.app-btn:disabled,
+.app-btn.disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    pointer-events: none;
+    box-shadow: none;
+}
+
+.white-btn:disabled,
+.white-btn.disabled {
+    background-color: #f8f8f8;
+    color: #bfc5ca;
+}
+
+.beige-btn:disabled,
+.beige-btn.disabled,
+.green-btn:disabled,
+.green-btn.disabled
+{
+    background-color: #c1c1c1;
+    color: #757575;
+}
+
+.red-btn:disabled,
+.red-btn.disabled {
+    background-color: #c87a76;
+    color: #e7e7e7;
+}
