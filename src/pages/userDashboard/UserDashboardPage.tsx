@@ -1,5 +1,4 @@
-import React, {useMemo, useState, useEffect, useRef, useCallback} from "react";
-import logo from "../../assets/logo.png";
+import {useMemo, useState, useEffect, useRef, useCallback} from "react";
 import illustration from "../../assets/dashboard-illustration.png";
 import filterIcon from "../../assets/filter.svg";
 import searchIcon from "../../assets/search.svg";
@@ -166,8 +165,6 @@ export const UserDashboardPage = () => {
                 </div>
                 <div className="header-right">
                     <RightHeaderButtons
-                        avatar={currentUser?.avatar ? import.meta.env.VITE_APP_API_BASE_URL + currentUser.avatar : null}
-                        userName={currentUser?.first_name || "Користувач"}
                         onChat={() => {/* TODO: handle open chat */
                         }}
                         onLogout={handleLogout}
@@ -418,6 +415,8 @@ export const UserDashboardPage = () => {
                                                 src={presentation.owner.avatar ? import.meta.env.VITE_APP_API_BASE_URL + presentation.owner.avatar : null}
                                                 alt={presentation.owner.first_name}
                                                 size={36}
+                                                name={presentation.owner.first_name}
+                                                surname={presentation.owner.last_name}
                                             />
                                         </div>
                                     </div>
