@@ -1,5 +1,5 @@
-import { useEffect } from "react";
-import chatSocketManager, {
+import { useEffect, useRef } from "react";
+import ChatSocketManager, {
     NewMessageEvent,
     AssignmentChangeEvent,
 } from "../api/socket/chatSocketManager";
@@ -14,21 +14,26 @@ export function useModeratorChatSocket(
     const { getToken } = useAuth();
     const token = getToken(Role.Moderator) || "";
 
+    const chatSocketManagerRef = useRef<ChatSocketManager | null>(null);
+
     useEffect(() => {
         if (!token) return;
 
-        chatSocketManager.connect(token);
+        const manager = new ChatSocketManager(token);
+        chatSocketManagerRef.current = manager;
 
-        chatSocketManager.joinModeratorChats();
+        manager.joinModeratorChats();
 
-        chatSocketManager.onModeratorNewMessage(onMessage);
-        chatSocketManager.onModeratorChatClosed(onChatClose);
-        chatSocketManager.onAssignmentChange(onAssignmentChange);
+        manager.onModeratorNewMessage(onMessage);
+        manager.onModeratorChatClosed(onChatClose);
+        manager.onAssignmentChange(onAssignmentChange);
 
         return () => {
-            chatSocketManager.offModeratorNewMessage(onMessage);
-            chatSocketManager.offModeratorChatClosed(onChatClose);
-            chatSocketManager.offAssignmentChange(onAssignmentChange);
+            manager.offModeratorNewMessage(onMessage);
+            manager.offModeratorChatClosed(onChatClose);
+            manager.offAssignmentChange(onAssignmentChange);
+            manager.disconnect();
+            chatSocketManagerRef.current = null;
         };
     }, [token, onMessage, onChatClose, onAssignmentChange]);
 }
