@@ -14,15 +14,18 @@
     "antd": "^5.25.2",
     "axios": "^1.9.0",
     "bootstrap": "^5.3.6",
+    "idb": "^8.0.3",
     "jwt-decode": "^4.0.0",
     "lucide-react": "^0.482.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-markdown": "^10.1.0",
     "react-router-dom": "^7.5.2",
+    "react-transition-group": "^4.4.5",
     "remark-gfm": "^4.0.1",
     "socket.io-client": "^4.8.1",
-    "textarea-caret-position": "^0.1.1"
+    "textarea-caret-position": "^0.1.1",
+    "webm-duration-fix": "^1.0.4"
   },
   "devDependencies": {
     "@eslint/js": "^9.21.0",

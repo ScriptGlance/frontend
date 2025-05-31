@@ -1,4 +1,4 @@
-import { SocketClient } from "../socketClient";
+import {SocketClient} from "../socketClient.ts";
 
 export enum PresentationEventType {
     NameChanged = "name_changed",
@@ -18,11 +18,11 @@ class PresentationSocketManager {
     private socketClient: SocketClient;
 
     constructor(token: string) {
-        this.socketClient = new SocketClient(token);
+        this.socketClient = new SocketClient(token, import.meta.env.VITE_APP_BASE_SOCKET_URL + "/presentations");
     }
 
     public subscribePresentation(presentationId: number): void {
-        this.socketClient.emit("subscribe_presentation", { presentationId });
+        this.socketClient.emit("subscribe_presentation", {presentationId});
     }
 
     public onPresentationEvent(callback: (event: PresentationEvent) => void): void {
@@ -35,10 +35,6 @@ class PresentationSocketManager {
 
     public disconnect(): void {
         this.socketClient.disconnect();
-    }
-
-    public getSocket() {
-        return this.socketClient.getSocket();
     }
 }
 

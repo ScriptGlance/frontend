@@ -56,6 +56,7 @@ export interface EditingPresence {
 export interface SubTextOperationsPayload extends TextOperationsPayload {
     userId: number;
     appliedVersion: number;
+    socketId: string;
 }
 
 export interface PartEventPayload {
@@ -69,7 +70,7 @@ export class PresentationPartsSocketManager {
     private socketClient: SocketClient;
 
     constructor(token: string) {
-        this.socketClient = new SocketClient(token);
+        this.socketClient = new SocketClient(token, import.meta.env.VITE_APP_BASE_SOCKET_URL + "/parts");
     }
 
     public subscribeText(presentationId: number) {
@@ -118,5 +119,9 @@ export class PresentationPartsSocketManager {
 
     public disconnect() {
         this.socketClient.disconnect();
+    }
+
+    public getSocketId(): string | undefined {
+        return this.socketClient.getSocket()?.id;
     }
 }

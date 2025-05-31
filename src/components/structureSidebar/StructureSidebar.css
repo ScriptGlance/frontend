@@ -68,6 +68,19 @@
     transition-duration: 0.4s;
 }
 
+.structure-part-stack.read .foreground {
+    background-color: #e3e4ea;
+}
+
+.structure-part-stack.read .structure-part-number {
+    background-color: #595d75;
+    color: #e3e4ea;
+}
+
+.structure-part-stack.read .background {
+    background-color: #595d75 !important;
+}
+
 .structure-sidebar {
     width: 280px;
     background-color: #EAE9E3;
@@ -124,7 +137,6 @@
     display: flex;
     flex-direction: column;
     z-index: 1;
-    cursor: pointer;
 }
 
 .structure-part.foreground.active {
@@ -152,8 +164,11 @@
     background-color: #d3ddd7;
 }
 
-.structure-part-stack:hover {
+.structure-part-stack.clickable:hover {
     transform: translateY(-2px);
+}
+
+.structure-part-stack.clickable {
     cursor: pointer;
 }
 

@@ -4,7 +4,7 @@ import volumeLowIcon from "../../assets/volume-low.svg";
 import volumeHighIcon from "../../assets/volume-high.svg";
 import playIcon from "../../assets/play-icon.svg";
 import pauseIcon from "../../assets/pause-icon.svg";
-import crossIcon from "../../assets/cross-icon.svg";
+import crossIcon from "../../assets/cross-icon-white.svg";
 import "./CustomVideoPlayer.css";
 
 export interface CustomVideoPlayerProps {

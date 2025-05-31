@@ -1,15 +1,15 @@
-import { Navigate } from 'react-router-dom';
-import React, { JSX } from 'react';
-import { useAuth } from "../../hooks/useAuth.ts";
-import { Role } from "../../types/role.ts";
+import React from "react";
+import { Navigate } from "react-router-dom";
+import {Role} from "../../types/role.ts";
+import {useAuth} from "../../hooks/useAuth.ts";
 
 interface ProtectedRouteProps {
-    children: JSX.Element;
+    children: React.ReactElement;
     role: Role;
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, role }) => {
-    const { isAuthenticated } = useAuth();
+    const { isAuthenticated} = useAuth();
 
     if (!isAuthenticated(role)) {
         return <Navigate to={getLoginRoute(role)} replace />;

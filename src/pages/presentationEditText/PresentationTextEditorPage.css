@@ -311,9 +311,14 @@
     transition: all 0.2s;
 }
 
-.format-btn:hover {
+.format-btn:hover:not(:disabled) {
     background-color: #f3f4f6;
     cursor: pointer;
+}
+
+.format-btn:disabled {
+    opacity: 0.5;
+    cursor: default !important;
 }
 
 .format-btn img {
@@ -509,6 +514,11 @@
     position: relative;
     vertical-align: middle;
     animation: dot-pulse-soft 1.7s cubic-bezier(.4, 0, .6, 1) infinite;
+}
+
+.part-editor-textarea:disabled, .part-title.disabled, .part-assignee-dropdown.disabled {
+    background-color: #e6e9ec;
+    cursor: not-allowed;
 }
 
 @keyframes dot-pulse-soft {

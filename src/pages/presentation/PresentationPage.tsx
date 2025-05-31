@@ -36,6 +36,7 @@ import DeleteConfirmationModal from "../../components/modals/deleteConfirmation/
 import VideoModal from "../../components/modals/video/VideoModal.tsx";
 import BuySubscriptionModal from "../../components/modals/buySubscription/BuySubscriptionModal.tsx";
 import Logo from "../../components/logo/Logo.tsx";
+import {truncateText} from "../../utils/textUtils.ts";
 
 const PresentationPage = () => {
 
@@ -325,7 +326,7 @@ const PresentationPage = () => {
                     label="Приєднатися"
                     className="join-button-presentation"
                     disabled={structureParts.length === 0}
-                    onClick={() => navigate(`/presentation/${presentationId}/join`)}
+                    onClick={() => navigate(`/presentation/${presentationId}/teleprompter`)}
                 />
             </div>
             <div className="presentation-content-presentation">
@@ -436,7 +437,7 @@ const PresentationPage = () => {
                                                             </div>
                                                         </div>
                                                         <div
-                                                            className="video-title-presentation">{video.video_title}</div>
+                                                            className="video-title-presentation">{truncateText(video.video_title, 50)}</div>
                                                         <div className="video-author-presentation">
                                                             {video.video_author.first_name} {video.video_author.last_name}
                                                         </div>
@@ -465,7 +466,7 @@ const PresentationPage = () => {
                                     </div>}
                                 </div>
                                 <BeigeButton
-                                    label="Редагувати текст"
+                                    label={(isPresentationStarted ? "Переглянути" : "Редагувати") + " текст"}
                                     className="edit-text-button-presentation"
                                     onClick={() => navigate(`/presentation/${presentationId}/text`)}
                                 />

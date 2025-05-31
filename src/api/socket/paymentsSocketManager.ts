@@ -1,4 +1,4 @@
-import { SocketClient } from "../socketClient";
+import {SocketClient} from "../socketClient.ts";
 
 export enum PaymentEventType {
     CARD_LINKED = "card_linked",
@@ -13,7 +13,7 @@ export class PaymentsSocketManager {
     private socketClient: SocketClient;
 
     constructor(token: string) {
-        this.socketClient = new SocketClient(token);
+        this.socketClient = new SocketClient(token, import.meta.env.VITE_APP_BASE_SOCKET_URL + "/payments");
     }
 
     public subscribePayments(): void {

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import {useEffect, useRef} from "react";
 import { useAuth } from "./useAuth";
 import { Role } from "../types/role";
 import {
@@ -25,7 +25,6 @@ export function usePresentationPartsSocket(
 ) {
     const { getToken } = useAuth();
     const token = getToken(Role.User) || "";
-
     const socketManagerRef = useRef<PresentationPartsSocketManager | null>(null);
 
     const editingPresenceRef = useRef(onEditingPresence);
@@ -85,8 +84,12 @@ export function usePresentationPartsSocket(
         socketManagerRef.current?.sendCursorPositionChange(payload);
     };
 
+    const getSocketId = () => socketManagerRef.current?.getSocketId();
+
+
     return {
         sendTextOperations,
         sendCursorPositionChange,
+        getSocketId,
     };
 }
