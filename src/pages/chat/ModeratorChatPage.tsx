@@ -8,13 +8,16 @@ import {
     useModeratorChats,
 } from "../../hooks/useChat";
 import { useModeratorChatSocket } from "../../hooks/useChatSocket";
-import { BeigeButton } from "../../components/appButton/AppButton";
 import { Avatar } from "../../components/avatar/Avatar";
 import Logo from "../../components/logo/Logo";
 import searchIcon from "../../assets/search.svg";
 import "./ModeratorChatPage.css";
 import RightHeaderButtons from "../../components/rightHeaderButtons/RightHeaderButtons.tsx";
 import { NewMessageEvent } from "../../api/socket/chatSocketManager.ts";
+import returnChatIcon from "../../assets/return-chat.svg";
+import closeChatIcon from "../../assets/close-chat.svg";
+import takeChatIcon from "../../assets/take-chat.svg";
+import sendIcon from "../../assets/send-icon.svg";
 
 type ChatTab = "my" | "general" | "history";
 
@@ -23,6 +26,43 @@ const CHAT_TABS: { label: string; value: ChatTab }[] = [
     { label: "Загальні чати", value: "general" },
     { label: "Історія", value: "history" },
 ];
+
+function upsertChat(
+    list: ModeratorChatListItem[],
+    msg: NewMessageEvent,
+    getDefaults: (msg: NewMessageEvent) => Partial<ModeratorChatListItem> = () => ({})
+): ModeratorChatListItem[] {
+    const idx = list.findIndex(c => c.chat_id === msg.chat_id);
+    if (idx === -1 && msg.chat_id) {
+        let user_full_name = msg.user_full_name;
+        console.log(msg);
+        if (!user_full_name || user_full_name === "string" || user_full_name === "undefined undefined") {
+            user_full_name = "Невідомий користувач";
+        }
+        return [
+            {
+                chat_id: msg.chat_id,
+                user_full_name,
+                avatar: null,
+                last_message: msg.text,
+                last_message_sent_date: msg.sent_date,
+                unread_messages_count: 1,
+                ...getDefaults(msg)
+            },
+            ...list
+        ];
+    }
+    return list.map(c =>
+        c.chat_id === msg.chat_id
+            ? {
+                ...c,
+                last_message: msg.text,
+                last_message_sent_date: msg.sent_date,
+                unread_messages_count: (c.unread_messages_count || 0) + 1
+            }
+            : c
+    );
+}
 
 const ModeratorChatPage: React.FC = () => {
     const navigate = useNavigate();
@@ -58,10 +98,6 @@ const ModeratorChatPage: React.FC = () => {
     const myChatsUnread = useMemo(
         () => localMyChats.reduce((sum, c) => sum + (c.unread_messages_count || 0), 0),
         [localMyChats]
-    );
-    const generalChatsUnread = useMemo(
-        () => localGeneralChats.reduce((sum, c) => sum + (c.unread_messages_count || 0), 0),
-        [localGeneralChats]
     );
 
     const chatsForCurrentTab = useMemo(() => {
@@ -130,43 +166,45 @@ const ModeratorChatPage: React.FC = () => {
     }, []);
 
     const handleSocketMessage = useCallback((msg: NewMessageEvent) => {
-        setMessages(prev =>
-            prev.some(m => m.chat_message_id === msg.chat_message_id)
-                ? prev
-                : [...prev, msg]
-        );
-        updateChatListWithNewMessage(msg);
+        if (msg.chat_id === chatId) {
+            setMessages(prev =>
+                prev.some(m => m.chat_message_id === msg.chat_message_id)
+                    ? prev
+                    : [...prev, msg]
+            );
+        }
 
+        setLocalGeneralChats(prev => upsertChat(prev, msg));
         setLocalMyChats(prev =>
             prev.map(c =>
                 c.chat_id === msg.chat_id
-                    ? { ...c, unread_messages_count: (msg.chat_id === chatId) ? 0 : (c.unread_messages_count || 0) + 1 }
-                    : c
-            )
-        );
-        setLocalGeneralChats(prev =>
-            prev.map(c =>
-                c.chat_id === msg.chat_id
-                    ? { ...c, unread_messages_count: (msg.chat_id === chatId) ? 0 : (c.unread_messages_count || 0) + 1 }
+                    ? {
+                        ...c,
+                        unread_messages_count: (selectedTab === "my" && chatId === msg.chat_id)
+                            ? 0
+                            : (c.unread_messages_count || 0) + 1,
+                        last_message: msg.text,
+                        last_message_sent_date: msg.sent_date,
+                    }
                     : c
             )
         );
         setLocalHistoryChats(prev =>
             prev.map(c =>
                 c.chat_id === msg.chat_id
-                    ? { ...c, unread_messages_count: (msg.chat_id === chatId) ? 0 : (c.unread_messages_count || 0) + 1 }
+                    ? { ...c, last_message: msg.text, last_message_sent_date: msg.sent_date }
                     : c
             )
         );
-    }, [chatId, updateChatListWithNewMessage]);
+    }, [chatId, selectedTab]);
 
     useEffect(() => {
-        if (chatId) {
-            setLocalMyChats(prev => prev.map(c => c.chat_id === chatId ? { ...c, unread_messages_count: 0 } : c));
-            setLocalGeneralChats(prev => prev.map(c => c.chat_id === chatId ? { ...c, unread_messages_count: 0 } : c));
-            setLocalHistoryChats(prev => prev.map(c => c.chat_id === chatId ? { ...c, unread_messages_count: 0 } : c));
+        if (selectedTab === "my" && chatId) {
+            setLocalMyChats(prev =>
+                prev.map(c => c.chat_id === chatId ? { ...c, unread_messages_count: 0 } : c)
+            );
         }
-    }, [chatId]);
+    }, [selectedTab, chatId]);
 
     const handleSocketChatClose = useCallback((data: any) => {
         if (chat && data && chat.chat_id === (data.chat_id ?? data.chatId)) setChat(null);
@@ -205,7 +243,6 @@ const ModeratorChatPage: React.FC = () => {
             markAsRead(chatId).catch(console.error);
         }
     }, [selectedTab, chatId, chat?.unread_messages_count, messages.length, markAsRead]);
-
     useEffect(() => {
         alreadyMarkedAsRead.current.clear();
     }, [chatId]);
@@ -258,6 +295,15 @@ const ModeratorChatPage: React.FC = () => {
         }
     };
 
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
+    useEffect(() => {
+        const textarea = textareaRef.current;
+        if (textarea) {
+            textarea.style.height = 'auto';
+            textarea.style.height = textarea.scrollHeight + 'px';
+        }
+    }, [messageInput]);
+
     const handleCloseChat = async () => {
         if (!chat) return;
         setSending(true);
@@ -293,8 +339,6 @@ const ModeratorChatPage: React.FC = () => {
             updateChatListWithNewMessage(newMsg);
 
             setLocalMyChats(prev => prev.map(c => c.chat_id === chat.chat_id ? { ...c, unread_messages_count: 0 } : c));
-            setLocalGeneralChats(prev => prev.map(c => c.chat_id === chat.chat_id ? { ...c, unread_messages_count: 0 } : c));
-            setLocalHistoryChats(prev => prev.map(c => c.chat_id === chat.chat_id ? { ...c, unread_messages_count: 0 } : c));
         } finally {
             setSending(false);
         }
@@ -312,19 +356,21 @@ const ModeratorChatPage: React.FC = () => {
     return (
         <div className="chats-main-container">
             <div className="chats-header-bar">
-                <Logo onClick={handleLogoClick} role={Role.Moderator}/>
-                <RightHeaderButtons role={Role.Moderator} onLogout={handleLogout}/>
+                <Logo onClick={handleLogoClick} role={Role.Moderator} />
+                <RightHeaderButtons role={Role.Moderator} onLogout={handleLogout} />
             </div>
             <div className="chats-center-card">
                 <div className="chats-list-sidebar">
                     <div className="chats-search-box">
-                        <img src={searchIcon} alt="Search" className="chats-search-icon"/>
-                        <input
-                            placeholder="Пошук користувачів..."
-                            className="chats-search-input"
-                            value={searchValue}
-                            onChange={(e) => setSearchValue(e.target.value)}
-                        />
+                        <div className="chats-search-input-wrapper">
+                            <img src={searchIcon} alt="Search" className="chats-search-icon" />
+                            <input
+                                placeholder="Пошук користувачів..."
+                                className="chats-search-input"
+                                value={searchValue}
+                                onChange={(e) => setSearchValue(e.target.value)}
+                            />
+                        </div>
                     </div>
                     <div className="chats-tabs-row">
                         {CHAT_TABS.map(tab => (
@@ -340,7 +386,7 @@ const ModeratorChatPage: React.FC = () => {
                                     </span>
                                 )}
                                 {tab.value === "my" && myChatsUnread > 0 && (
-                                    <span className="chats-badge">{myChatsUnread}</span>
+                                    <span className="chats-unread-messages-badge">{myChatsUnread}</span>
                                 )}
                             </button>
                         ))}
@@ -371,7 +417,7 @@ const ModeratorChatPage: React.FC = () => {
                                             {c.last_message_sent_date && new Date(c.last_message_sent_date)
                                                 .toLocaleTimeString("uk-UA", { hour: "2-digit", minute: "2-digit" })}
                                         </div>
-                                        {c.unread_messages_count > 0 && (
+                                        {selectedTab === "my" && c.unread_messages_count > 0 && (
                                             <span className="chats-badge">{c.unread_messages_count}</span>
                                         )}
                                     </div>
@@ -392,27 +438,41 @@ const ModeratorChatPage: React.FC = () => {
                                     size={44}
                                 />
                                 <div className="chats-chat-header-name">{chat.user_full_name}</div>
-                                <div style={{ flex: 1 }}/>
+                                <div style={{ flex: 1 }} />
                                 {selectedTab === "my" && (
-                                    <BeigeButton
-                                        label="Повернути"
-                                        style={{ marginRight: 10 }}
-                                        onClick={handleUnassign}
-                                        disabled={sending}
-                                    />
+                                    <div className="chat-header-actions">
+                                        <button
+                                            className="chat-header-action return"
+                                            onClick={handleUnassign}
+                                            disabled={sending}
+                                            type="button"
+                                        >
+                                            <img src={returnChatIcon} alt="" className="chat-header-icon icon-blue" />
+                                            <span>Повернути</span>
+                                        </button>
+                                        <button
+                                            className="chat-header-action close"
+                                            onClick={handleCloseChat}
+                                            type="button"
+                                            disabled={sending}
+                                        >
+                                            <img src={closeChatIcon} alt="" className="chat-header-icon icon-red" />
+                                            <span>Закрити</span>
+                                        </button>
+                                    </div>
                                 )}
                                 {selectedTab === "general" && (
-                                    <BeigeButton
-                                        label="Взяти"
-                                        style={{ marginRight: 10 }}
-                                        onClick={handleAssign}
-                                        disabled={sending}
-                                    />
-                                )}
-                                {selectedTab === "my" && (
-                                    <span className="chats-chat-header-close" onClick={handleCloseChat}>
-                                        Закрити
-                                    </span>
+                                    <div className="chat-header-actions">
+                                        <button
+                                            className="chat-header-action take"
+                                            onClick={handleAssign}
+                                            disabled={sending}
+                                            type="button"
+                                        >
+                                            <img src={takeChatIcon} alt="" className="chat-header-icon icon-blue" />
+                                            <span>Взяти</span>
+                                        </button>
+                                    </div>
                                 )}
                             </div>
                             <div className="chats-chat-messages">
@@ -453,7 +513,7 @@ const ModeratorChatPage: React.FC = () => {
                                                     </React.Fragment>
                                                 );
                                             })}
-                                        <div ref={messagesEndRef}/>
+                                        <div ref={messagesEndRef} />
                                     </>
                                 )}
                             </div>
@@ -463,26 +523,24 @@ const ModeratorChatPage: React.FC = () => {
                                         e.preventDefault();
                                         handleSendMessage();
                                     }}
-                                    className="chats-send-message-form"
+                                    className="chats-send-message-form chats-send-message-form--with-bg"
                                 >
-                                    <input
-                                        type="text"
+                                    <textarea
+                                        ref={textareaRef}
                                         value={messageInput}
                                         onChange={e => setMessageInput(e.target.value)}
                                         placeholder="Введіть повідомлення..."
                                         className="chats-send-message-input"
                                         disabled={sending}
+                                        rows={1}
+                                        style={{ resize: "none", overflow: "hidden" }}
                                     />
                                     <button
                                         type="submit"
                                         disabled={sending || !messageInput.trim()}
-                                        className="chats-send-message-btn"
+                                        className="send-btn"
                                     >
-                                        <svg width={29} height={29}
-                                             style={{ opacity: (sending || !messageInput.trim()) ? 0.55 : 1 }}>
-                                            <circle cx="14.5" cy="14.5" r="14" fill="#5e7158"/>
-                                            <polygon points="11,9 20,14.5 11,20" fill="#fff"/>
-                                        </svg>
+                                        <img src={sendIcon} alt="Відправити" />
                                     </button>
                                 </form>
                             )}
