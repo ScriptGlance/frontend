@@ -1,0 +1,25 @@
+.modal-body-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+
+.modal-icon {
+    width: 33px;
+    height: 33px;
+}
+
+.modal-title {
+    font-size: 30px;
+    font-weight: 500;
+    font-style: normal;
+    color: #212529;
+}
+
+.modal-message {
+    margin-bottom: 1.5rem;
+    font-size: 20px;
+    font-weight: 200;
+    color: #45515C;
+}
