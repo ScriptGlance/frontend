@@ -1,31 +1,34 @@
 import React, {useEffect, useRef, useState} from 'react';
 import timeIcon from "../../assets/time-icon.svg";
 import {Avatar} from "../avatar/Avatar.tsx";
-import {ActiveUser} from "../../pages/presentationEditText/PresentationTextEditorPage.tsx";
 import sidebarIcon from "../../assets/sidebar-icon.svg";
 import './StructureSidebar.css';
 import {Participant} from "../../api/repositories/presentationsRepository.ts";
-import {PresentationPartFull} from "../../api/repositories/presentationPartsRepository.ts";
+
+export interface SidebarPart {
+    part_id: number;
+    assignee_user_id: number | null;
+    part_name: string;
+}
 
 interface StructureSidebarProps {
-    totalDuration: string;
-    parts: PresentationPartFull[];
-    nameTexts: { [key: number]: string };
-    wordCounts: { [key: number]: string };
+    totalDuration?: string;
+    parts: SidebarPart[];
     participants: Participant[];
-    activeUsers: ActiveUser[];
-    partDurations: { [key: number]: string };
-    onPartClick: (partId: number) => void;
-    visiblePartId: number | null;
+    onPartClick?: (partId: number) => void;
+    highlightedPartId: number | null;
+    showReadParts?: boolean;
+    marginBottom?: string;
 }
 
 const StructureSidebar: React.FC<StructureSidebarProps> = ({
                                                                totalDuration,
                                                                parts,
-                                                               nameTexts,
                                                                participants,
                                                                onPartClick,
-                                                               visiblePartId,
+                                                               highlightedPartId,
+                                                               showReadParts = false,
+                                                               marginBottom = '0',
                                                            }) => {
     const [isFolded, setIsFolded] = useState(false);
     const partRefs = useRef<{ [key: number]: HTMLDivElement | null }>({});
@@ -36,7 +39,7 @@ const StructureSidebar: React.FC<StructureSidebarProps> = ({
 
     useEffect(() => {
         const container = document.querySelector('.structure-parts') as HTMLDivElement | null;
-        const target = partRefs.current[visiblePartId ?? -1];
+        const target = partRefs.current[highlightedPartId ?? -1];
 
         if (container && target) {
             const containerRect = container.getBoundingClientRect();
@@ -47,7 +50,7 @@ const StructureSidebar: React.FC<StructureSidebarProps> = ({
 
             smoothScrollTo(container, scrollTarget, 75);
         }
-    }, [visiblePartId]);
+    }, [highlightedPartId]);
 
     const smoothScrollTo = (container: Element, targetScrollTop: number, duration = 200) => {
         const start = container.scrollTop;
@@ -71,6 +74,9 @@ const StructureSidebar: React.FC<StructureSidebarProps> = ({
 
     const easeInOutQuad = (t: number): number => t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
 
+    const activeIndex = highlightedPartId != null
+        ? parts.findIndex(p => p.part_id === highlightedPartId)
+        : -1;
 
     return (
         <div className={`structure-sidebar ${isFolded ? 'folded' : ''}`}>
@@ -92,35 +98,39 @@ const StructureSidebar: React.FC<StructureSidebarProps> = ({
                 </span>
                 </div>
 
-                <div className="structure-header-right">
+                {totalDuration && <div className="structure-header-right">
                     <span className="structure-time">
                         <img src={timeIcon} alt="Time" className="time-icon"/>
                         {totalDuration}
                     </span>
-                </div>
+                </div>}
             </div>
 
             {!isFolded && (
-                <div className="structure-parts">
+                <div className="structure-parts" style={{marginBottom: marginBottom}}>
                     {parts.map((part, index) => {
                         const partId = part.part_id;
-                        const participantColor = participants?.find(p => p.participant_id === part.assignee_participant_id)?.color || '#6b7280';
-                        const assignee = participants?.find(p => p.participant_id === part.assignee_participant_id)?.user;
+                        const participantColor = participants?.find(p => p.user.user_id === part.assignee_user_id)?.color || '#6b7280';
+                        const assignee = participants?.find(p => p.user.user_id === part.assignee_user_id)?.user;
+                        const isRead = showReadParts && activeIndex > 0 && index < activeIndex;
 
                         return (
-                            <div className="structure-part-stack">
+                            <div
+                                className={`structure-part-stack ${isRead ? 'read' : ''} ${onPartClick ? 'clickable' : ''}`}>
                                 <div
                                     className="structure-part background"
                                     style={{backgroundColor: participantColor}}
                                 />
                                 <div
-                                    className={`structure-part foreground ${visiblePartId === partId ? 'active' : ''}`}
-                                    onClick={() => onPartClick(partId)}
-                                    ref={(el) => { partRefs.current[partId] = el; }}
+                                    className={`structure-part foreground ${highlightedPartId === partId ? 'active' : ''}`}
+                                    onClick={() => onPartClick ? onPartClick(partId) : null}
+                                    ref={(el) => {
+                                        partRefs.current[partId] = el;
+                                    }}
                                 >
                                     <div className="structure-part-row-header">
                                         <div className="structure-part-number">{index + 1}</div>
-                                        <div className="structure-part-title">{nameTexts[partId]}</div>
+                                        <div className="structure-part-title">{part.part_name}</div>
                                     </div>
                                     <div className="structure-part-row-footer">
                                         <div className="structure-part-assignee">

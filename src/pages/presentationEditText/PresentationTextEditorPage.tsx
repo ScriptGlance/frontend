@@ -1,5 +1,5 @@
-import React, {useState, useEffect, useRef, useCallback, useMemo} from "react";
-import {useParams, useNavigate} from "react-router-dom";
+import React, {useCallback, useEffect, useMemo, useRef, useState} from "react";
+import {useNavigate, useParams} from "react-router-dom";
 import {useProfile} from "../../hooks/ProfileContext.tsx";
 import {
     usePresentationDetails,
@@ -7,22 +7,23 @@ import {
     usePresentationsConfig
 } from "../../hooks/usePresentationData.ts";
 import {
+    useCreatePresentationPart,
+    useDeletePresentationPart,
     usePresentationCursorPositions,
     usePresentationParts,
-    useUpdatePresentationPart,
-    useCreatePresentationPart,
-    useDeletePresentationPart
+    useUpdatePresentationPart
 } from "../../hooks/usePresentationParts.ts";
 import {usePresentationPartsSocket} from "../../hooks/usePresentationPartsSocket.ts";
 import {
     EditingPresence,
-    OperationTarget,
     EditingPresenceType,
-    SubTextOperationsPayload,
+    OperationComponent,
+    OperationTarget,
+    PartEventPayload,
     PartEventType,
-    PartEventPayload, OperationComponent
+    SubTextOperationsPayload
 } from "../../api/socket/presentationPartsSocketManager.ts";
-import {DragDropContext, Droppable, Draggable, DropResult} from "@hello-pangea/dnd";
+import {DragDropContext, Draggable, Droppable, DropResult} from "@hello-pangea/dnd";
 import {Dropdown, Menu} from "antd";
 import {Avatar} from "../../components/avatar/Avatar";
 import {getPartDuration} from "../../utils/partUtils.ts";
@@ -41,6 +42,7 @@ import {PresentationEventType} from "../../api/socket/presentationSocketManager.
 import {flushSync} from "react-dom";
 import ParticipantsHeader from "../../components/participantsHeader/ParticipantsHeader.tsx";
 import StructureSidebar from "../../components/structureSidebar/StructureSidebar.tsx";
+import {useActiveTeleprompterData} from "../../hooks/useTeleprompterPresentation.ts";
 
 export interface PendingTextOp {
     operations: OperationComponent[];
@@ -99,6 +101,18 @@ const PresentationTextEditorPage: React.FC = () => {
         profileRef.current = profile;
     }, [profile]);
 
+    const {
+        activeData: activePresentationData,
+    } = useActiveTeleprompterData(presentationId);
+    
+    const [isPresentationStarted, setPresentationStarted] = useState(false);
+    
+    useEffect(() => {
+        if (activePresentationData?.currentPresentationStartDate) {
+            setPresentationStarted(true);
+        }
+    }, [activePresentationData?.currentPresentationStartDate]);
+
     const {presentation, refetch: refetchPresentation} = usePresentationDetails(presentationId);
     const {parts, loading: partsLoading} = usePresentationParts(presentationId);
     const {participants} = usePresentationParticipants(presentationId);
@@ -129,7 +143,7 @@ const PresentationTextEditorPage: React.FC = () => {
     const [visiblePartId, setVisiblePartId] = useState<number | null>(null);
     const [isDragging, setIsDragging] = useState(false);
     const [draggedItemId, setDraggedItemId] = useState<number | null>(null);
-    const selectionPositionsRef = useRef<Record<number, {start: number, end: number}>>({});
+    const selectionPositionsRef = useRef<Record<number, { start: number, end: number }>>({});
 
     const useDebounce = <T, >(value: T, delay: number) => {
         const [debouncedValue, setDebouncedValue] = useState(value);
@@ -147,7 +161,7 @@ const PresentationTextEditorPage: React.FC = () => {
         return debouncedValue;
     };
 
-    const [operationQueue, setOperationQueue] = useState<{[partId: number]: number}>({});
+    const [operationQueue, setOperationQueue] = useState<{ [partId: number]: number }>({});
     useDebounce(operationQueue, 50);
     useEffect(() => {
         if (!partsLoading) {
@@ -318,12 +332,17 @@ const PresentationTextEditorPage: React.FC = () => {
     usePresentationSocket(presentationId, (event) => {
         if (event.event_type === PresentationEventType.NameChanged) {
             refetchPresentation();
+        } else if (event.event_type === PresentationEventType.PresentationStarted) {
+            setPresentationStarted(true)
+        } else if (event.event_type === PresentationEventType.PresentationStopped) {
+            setPresentationStarted(false);
         }
     });
 
     const {
         sendTextOperations,
         sendCursorPositionChange,
+        getSocketId
     } = usePresentationPartsSocket(presentationId, {
         onEditingPresence: (data: EditingPresence) => {
             if (data.type === EditingPresenceType.UserJoined) {
@@ -505,9 +524,9 @@ const PresentationTextEditorPage: React.FC = () => {
                         pendingOperations: [],
                         pendingNameOps: [],
                         editingName: false,
-                        history: [{ text: part.part_text || '', cursorPos: 0, selectionStart: 0, selectionEnd: 0 }],
+                        history: [{text: part.part_text || '', cursorPos: 0, selectionStart: 0, selectionEnd: 0}],
                         historyPosition: 0,
-                        textSelection: { start: 0, end: 0 },
+                        textSelection: {start: 0, end: 0},
                     }),
                     part_order: part.part_order,
                     assignee_participant_id: part.assignee_participant_id
@@ -622,6 +641,7 @@ const PresentationTextEditorPage: React.FC = () => {
         const {
             partId,
             target,
+            socketId: remoteSocketId,
             userId: remoteUserId,
             baseVersion: payload_base_version,
             appliedVersion: payload_applied_version,
@@ -634,7 +654,7 @@ const PresentationTextEditorPage: React.FC = () => {
             return;
         }
 
-        const isOwnOp = remoteUserId === profileRef.current?.user_id;
+        const isOwnOp = remoteUserId === profileRef.current?.user_id && remoteSocketId === getSocketId();
         const logPrefix = `[OT][${isOwnOp ? `ACK_for_u${remoteUserId}` : `RemoteOp_from_u${remoteUserId}`}] PartID ${partId}, Target ${target}:`;
 
         let selectionBeforeAnyStateUpdate: { start: number, end: number } | null = null;
@@ -654,9 +674,9 @@ const PresentationTextEditorPage: React.FC = () => {
         }
 
         console.log(`${logPrefix} Received. PayloadBaseV: ${payload_base_version}, ServerOps: ${JSON.stringify(ops_from_server)}, AppliedV: ${payload_applied_version}`);
-        console.log(`${logPrefix} Current local state before processing - Text: "${(target === OperationTarget.Text ? currentPartStateFromRef.partText : currentPartStateFromRef.nameText).substring(0,30)}...", Version: ${target === OperationTarget.Text ? currentPartStateFromRef.version : currentPartStateFromRef.nameVersion}, PendingOpsCount: ${target === OperationTarget.Text ? currentPartStateFromRef.pendingOperations.length : currentPartStateFromRef.pendingNameOps.length}`);
+        console.log(`${logPrefix} Current local state before processing - Text: "${(target === OperationTarget.Text ? currentPartStateFromRef.partText : currentPartStateFromRef.nameText).substring(0, 30)}...", Version: ${target === OperationTarget.Text ? currentPartStateFromRef.version : currentPartStateFromRef.nameVersion}, PendingOpsCount: ${target === OperationTarget.Text ? currentPartStateFromRef.pendingOperations.length : currentPartStateFromRef.pendingNameOps.length}`);
 
-        setOperationQueue(prev => ({ ...prev, [partId]: (prev[partId] || 0) + 1 }));
+        setOperationQueue(prev => ({...prev, [partId]: (prev[partId] || 0) + 1}));
 
         if (isOwnOp) {
             const pendingOpsListKey = target === OperationTarget.Name ? 'pendingNameOps' : 'pendingOperations';
@@ -673,7 +693,7 @@ const PresentationTextEditorPage: React.FC = () => {
                     setPartsState(prev => {
                         const partFromPrev = prev[partId];
                         if (!partFromPrev) return prev;
-                        const updatedPart = { ...partFromPrev };
+                        const updatedPart = {...partFromPrev};
 
                         updatedPart[pendingOpsListKey] = pendingOpsList.filter(op => op.baseVersion !== payload_base_version);
 
@@ -685,7 +705,7 @@ const PresentationTextEditorPage: React.FC = () => {
                         }
 
                         console.log(`${logPrefix} After ACK: PendingOpsCount: ${updatedPart[pendingOpsListKey].length}, Version: ${updatedPart[versionKey]}`);
-                        return { ...prev, [partId]: updatedPart };
+                        return {...prev, [partId]: updatedPart};
                     });
                 });
             } else {
@@ -694,12 +714,12 @@ const PresentationTextEditorPage: React.FC = () => {
                     setPartsState(prev => {
                         const partFromPrev = prev[partId];
                         if (!partFromPrev) return prev;
-                        const updatedPart = { ...partFromPrev };
+                        const updatedPart = {...partFromPrev};
                         if (payload_applied_version > updatedPart[versionKey]) {
                             updatedPart[versionKey] = payload_applied_version;
                             console.log(`${logPrefix} ACK for unknown op updated local version to ${payload_applied_version}.`);
                         }
-                        return { ...prev, [partId]: updatedPart };
+                        return {...prev, [partId]: updatedPart};
                     });
                 });
             }
@@ -741,23 +761,27 @@ const PresentationTextEditorPage: React.FC = () => {
                     console.warn(`${logPrefix} Part ${partId} not found in prev state during remote op flushSync. This should not happen.`);
                     return prev;
                 }
-                const partToUpdate = { ...partFromPrev };
+                const partToUpdate = {...partFromPrev};
 
                 partToUpdate[localPendingOpsKey] = newTransformedLocalPendingOpsList;
 
                 if (transformedRemoteOps.length > 0) {
                     const textBeforeApply = partToUpdate[localTextKey];
                     try {
-                        console.log(`${logPrefix} Applying final transformed remote ops to local text. Text before: "${textBeforeApply.substring(0,50)}..."`);
+                        console.log(`${logPrefix} Applying final transformed remote ops to local text. Text before: "${textBeforeApply.substring(0, 50)}..."`);
                         partToUpdate[localTextKey] = applyOps(textBeforeApply, transformedRemoteOps);
                         partToUpdate[localLastSentTextKey] = partToUpdate[localTextKey];
                         if (target === OperationTarget.Text) {
                             partToUpdate[localWordCountKey] = calculateWordCount(partToUpdate[localTextKey]);
                         }
-                        console.log(`${logPrefix} Local text after applying remote ops: "${partToUpdate[localTextKey].substring(0,50)}..."`);
+                        console.log(`${logPrefix} Local text after applying remote ops: "${partToUpdate[localTextKey].substring(0, 50)}..."`);
                         // eslint-disable-next-line
                     } catch (e: any) {
-                        console.error(`${logPrefix} Error applying final transformed remote ops:`, e.message, { text: textBeforeApply, ops: transformedRemoteOps, stack: e.stack });
+                        console.error(`${logPrefix} Error applying final transformed remote ops:`, e.message, {
+                            text: textBeforeApply,
+                            ops: transformedRemoteOps,
+                            stack: e.stack
+                        });
                     }
                 } else {
                     console.log(`${logPrefix} No remote operations to apply to local text after transformations.`);
@@ -766,7 +790,7 @@ const PresentationTextEditorPage: React.FC = () => {
                 partToUpdate[localVersionKey] = payload_applied_version;
 
                 console.log(`${logPrefix} State updated. New local version: ${partToUpdate[localVersionKey]}, New pending ops count: ${partToUpdate[localPendingOpsKey].length}`);
-                return { ...prev, [partId]: partToUpdate };
+                return {...prev, [partId]: partToUpdate};
             });
         });
 
@@ -793,7 +817,7 @@ const PresentationTextEditorPage: React.FC = () => {
                 elementRef.selectionEnd = finalEnd;
 
                 if (selectionPositionsRef.current[partId]) {
-                    selectionPositionsRef.current[partId] = { start: finalStart, end: finalEnd };
+                    selectionPositionsRef.current[partId] = {start: finalStart, end: finalEnd};
                 }
 
                 sendCursorPositionChange({
@@ -808,7 +832,6 @@ const PresentationTextEditorPage: React.FC = () => {
             }
         }
     }, [partsStateRef, profileRef, sendCursorPositionChange, transform, applyOps, transformPosition]);
-
 
 
     const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>, partId: number) => {
@@ -1153,7 +1176,6 @@ const PresentationTextEditorPage: React.FC = () => {
     };
 
 
-
     const requestDeletePart = (partId: number) => {
         setConfirmDeletePartId(partId);
         setDeletePartName(partsState[partId]?.nameText || "");
@@ -1271,27 +1293,6 @@ const PresentationTextEditorPage: React.FC = () => {
         });
     };
 
-
-    useEffect(() => {
-        const saveInterval = setInterval(() => {
-            Object.entries(partsState).forEach(([partIdStr, partState]) => {
-                const partId = parseInt(partIdStr, 10);
-                const originalPart = parts.find(p => p.part_id === partId);
-
-                if (originalPart && partState.partText !== originalPart.part_text &&
-                    (!partState.pendingOperations || partState.pendingOperations.length === 0)) {
-
-                    updatePart(partId, {
-                        part_order: partState.part_order,
-                        part_assignee_participant_id: partState.assignee_participant_id
-                    });
-                }
-            });
-        }, 5000);
-
-        return () => clearInterval(saveInterval);
-    }, [partsState, parts, updatePart]);
-
     const handleBack = () => {
         Object.entries(partsState).forEach(([partIdStr, partState]) => {
             const partId = parseInt(partIdStr, 10);
@@ -1358,12 +1359,12 @@ const PresentationTextEditorPage: React.FC = () => {
     if (isFirstLoad) {
         return <div className="loading-container">Завантаження...</div>;
     }
-
+    
     if (!partsLoading && parts.length === 0) {
         return (
             <div className="empty-presentation">
                 <div className="empty-message">Немає доступних частин</div>
-                <button className="add-part-button" onClick={() => handleCreatePart()}>
+                <button className="add-part-button" onClick={() => handleCreatePart()} disabled={isPresentationStarted}>
                     <img src={addIcon} alt="Add" className="add-icon"/>
                     Додати частину
                 </button>
@@ -1371,15 +1372,18 @@ const PresentationTextEditorPage: React.FC = () => {
         );
     }
 
+
     return (
         <div className="presentation-text-editor">
             <ParticipantsHeader
+                pageType='editor'
                 presentationName={presentationName}
                 participants={participants}
-                activeUsers={activeUsers}
+                editorActiveUsers={activeUsers}
                 profile={profile ?? undefined}
                 onBack={handleBack}
             />
+
 
             <div className="editor-container">
                 <DragDropContext
@@ -1429,14 +1433,16 @@ const PresentationTextEditorPage: React.FC = () => {
                             >
                                 <div
                                     className="part-gap"
+                                    style={{pointerEvents: isPresentationStarted ? 'none' : 'auto'}}
                                     onMouseEnter={() => setShowAddPartBtn(-1)}
                                     onMouseLeave={() => setShowAddPartBtn(null)}
                                 >
-                                    {showAddPartBtn === -1 && (
+                                    {showAddPartBtn === -1 && !isPresentationStarted && (
                                         <div className="add-part-hover">
                                             <button
                                                 className="add-part-hover-btn"
                                                 onClick={() => handleCreatePart(undefined, true)}
+                                                disabled={isPresentationStarted}
                                             >
                                                 <img src={addIcon} alt="Add" className="add-icon"/>
                                                 Додати частину
@@ -1459,10 +1465,11 @@ const PresentationTextEditorPage: React.FC = () => {
                                             {index > 0 && (
                                                 <div
                                                     className="part-gap"
+                                                    style={{pointerEvents: isPresentationStarted ? 'none' : 'auto'}}
                                                     onMouseEnter={() => setShowAddPartBtn(index - 1)}
                                                     onMouseLeave={() => setShowAddPartBtn(null)}
                                                 >
-                                                    {showAddPartBtn === index - 1 && (
+                                                    {showAddPartBtn === index - 1 && !isPresentationStarted && (
                                                         <div className="add-part-hover">
                                                             <button
                                                                 className="add-part-hover-btn"
@@ -1478,7 +1485,8 @@ const PresentationTextEditorPage: React.FC = () => {
 
                                             <Draggable key={`part-${partId}-index-${index}`}
                                                        draggableId={`part-${partId}`} index={index}
-                                                       disableInteractiveElementBlocking={false}>
+                                                       disableInteractiveElementBlocking={false}
+                                                       isDragDisabled={isPresentationStarted}>
                                                 {(provided) => (
                                                     <div
                                                         ref={(el) => {
@@ -1511,15 +1519,19 @@ const PresentationTextEditorPage: React.FC = () => {
                                                                     const target = e.target as HTMLInputElement;
                                                                     const start = target.selectionStart ?? 0;
                                                                     const end = target.selectionEnd ?? 0;
-                                                                    selectionPositionsRef.current[partId] = { start, end };
+                                                                    selectionPositionsRef.current[partId] = {
+                                                                        start,
+                                                                        end
+                                                                    };
                                                                     handleSelectionChange(partId, 'name');
                                                                 }}
                                                                 inputRef={(ref) => nameInputRefs.current[partId] = ref}
                                                                 resizeTick={resizeTick}
+                                                                disabled={isPresentationStarted}
                                                             />
 
                                                             <div className="part-actions">
-                                                                <div className="part-assignee-dropdown">
+                                                                <div className={`part-assignee-dropdown ${isPresentationStarted ? 'disabled' : ''}`}>
                                                                     <Dropdown
                                                                         overlay={
                                                                             <Menu>
@@ -1551,6 +1563,7 @@ const PresentationTextEditorPage: React.FC = () => {
                                                                             </Menu>
                                                                         }
                                                                         trigger={['click']}
+                                                                        disabled={isPresentationStarted}
                                                                     >
                                                                         <div className="part-assignee">
                                                                             <div className="assignee-info">
@@ -1586,7 +1599,7 @@ const PresentationTextEditorPage: React.FC = () => {
                                                                 <button
                                                                     className="part-delete-btn"
                                                                     onClick={() => requestDeletePart(partId)}
-                                                                    disabled={orderedParts.length === 1}
+                                                                    disabled={orderedParts.length === 1 || isPresentationStarted}
                                                                     title="Видалити частину"
                                                                 >
                                                                     <img src={deleteIcon} alt="Delete"/>
@@ -1610,12 +1623,13 @@ const PresentationTextEditorPage: React.FC = () => {
                                                                 const target = e.target as HTMLTextAreaElement;
                                                                 const start = target.selectionStart ?? 0;
                                                                 const end = target.selectionEnd ?? 0;
-                                                                selectionPositionsRef.current[partId] = { start, end };
+                                                                selectionPositionsRef.current[partId] = {start, end};
                                                                 handleSelectionChange(partId, 'text');
                                                             }}
                                                             onUndo={() => handleUndo(partId)}
                                                             onRedo={() => handleRedo(partId)}
                                                             resizeTick={resizeTick}
+                                                            disabled={isPresentationStarted}
                                                         />
                                                     </div>
                                                 )}
@@ -1627,7 +1641,7 @@ const PresentationTextEditorPage: React.FC = () => {
 
                                 {provided.placeholder}
 
-                                <div className="add-part-container">
+                                {!isPresentationStarted && <div className="add-part-container">
                                     <button
                                         className="add-part-button"
                                         onClick={() => handleCreatePart()}
@@ -1635,7 +1649,7 @@ const PresentationTextEditorPage: React.FC = () => {
                                         <img src={addIcon} alt="Add" className="add-icon"/>
                                         Додати частину
                                     </button>
-                                </div>
+                                </div>}
                             </div>
                         )}
                     </Droppable>
@@ -1643,20 +1657,16 @@ const PresentationTextEditorPage: React.FC = () => {
 
                 <StructureSidebar
                     totalDuration={config ? getPartDuration(totalWordCount, config, false) : ''}
-                    parts={orderedParts}
-                    nameTexts={Object.entries(partsState).reduce((obj, [id, state]) => {
-                        obj[parseInt(id)] = state.nameText;
-                        return obj;
-                    }, {} as Record<number, string>)}
-                    wordCounts={Object.entries(partsState).reduce((obj, [id, state]) => {
-                        obj[parseInt(id)] = String(state.wordCount);
-                        return obj;
-                    }, {} as Record<number, string>)}
+                    parts={orderedParts.map(part => {
+                        return {
+                            part_id: part.part_id,
+                            assignee_user_id: participants.find(p => p.participant_id === part.assignee_participant_id)?.user.user_id || 0,
+                            part_name: Object.entries(partsState).find(([id]) => parseInt(id) === part.part_id)?.[1].nameText || '',
+                        }
+                    })}
                     participants={participants || []}
-                    activeUsers={activeUsers}
-                    partDurations={partDurations}
                     onPartClick={handlePartClick}
-                    visiblePartId={visiblePartId}
+                    highlightedPartId={visiblePartId}
                 />
 
                 <ConfirmationModal

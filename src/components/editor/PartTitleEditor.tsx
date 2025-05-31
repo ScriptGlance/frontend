@@ -16,6 +16,7 @@ const PartTitleEditor: React.FC<{
     onSelectionChange: React.ReactEventHandler<HTMLInputElement>;
     inputRef: (ref: HTMLInputElement | null) => void;
     resizeTick: number;
+    disabled: boolean;
 }> = ({
           partId,
           text,
@@ -28,7 +29,8 @@ const PartTitleEditor: React.FC<{
           onTextChange,
           onSave,
           onSelectionChange,
-          inputRef
+          inputRef,
+          disabled
       }) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const localInputRef = useRef<HTMLInputElement>(null);
@@ -60,7 +62,6 @@ const PartTitleEditor: React.FC<{
             (parseInt(window.getComputedStyle(element).paddingLeft) || 0) :
             0;
 
-        console.log('Padding Left:', paddingLeft, 'Width:', div.offsetWidth);
         return paddingLeft + div.offsetWidth;
     };
 
@@ -139,6 +140,7 @@ const PartTitleEditor: React.FC<{
                         onKeyDown={(e) => e.key === 'Enter' && onSave()}
                         onSelect={onSelectionChange}
                         onFocus={onSelectionChange}
+                        disabled={disabled}
                     />
 
                     {relevantUsers.map(user => {
@@ -212,7 +214,7 @@ const PartTitleEditor: React.FC<{
             ) : (
                 <div
                     ref={containerRef}
-                    className="part-title"
+                    className={`part-title ${disabled ? 'disabled' : ''}`}
                     onClick={handleTitleClick}
                     style={{position: 'relative'}}
                 >

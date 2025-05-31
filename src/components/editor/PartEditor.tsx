@@ -6,7 +6,7 @@ import timeIcon from "../../assets/time-icon.svg";
 import {ActiveUser} from "../../pages/presentationEditText/PresentationTextEditorPage.tsx";
 import {pluralizeUkrainian} from "../../utils/plurals.ts";
 import {Participant} from "../../api/repositories/presentationsRepository.ts";
-import { createOps, transformPosition } from '../../utils/operationalTransform.ts';
+import {createOps, transformPosition} from '../../utils/operationalTransform.ts';
 
 interface PartEditorProps {
     partId: number;
@@ -27,6 +27,7 @@ interface PartEditorProps {
     onUndo: () => void;
     onRedo: () => void;
     resizeTick: number;
+    disabled: boolean;
 }
 
 const PartEditor: React.FC<PartEditorProps> = ({
@@ -44,7 +45,8 @@ const PartEditor: React.FC<PartEditorProps> = ({
                                                    onSelectionChange,
                                                    onUndo,
                                                    onRedo,
-                                                   resizeTick
+                                                   resizeTick,
+                                                   disabled
                                                }) => {
     const INDENT = '    ';
 
@@ -372,7 +374,7 @@ const PartEditor: React.FC<PartEditorProps> = ({
         if (e.key === 'Enter') {
             e.preventDefault();
 
-            const { lineStart } = getLineInfo(initialValue, initialSelectionStart);
+            const {lineStart} = getLineInfo(initialValue, initialSelectionStart);
             const currentLineText = initialValue.substring(lineStart, initialValue.indexOf('\n', lineStart) === -1 ? initialValue.length : initialValue.indexOf('\n', lineStart));
             const isCurrentLineEffectivelyEmpty = isEmptyLine(currentLineText);
 
@@ -432,7 +434,7 @@ const PartEditor: React.FC<PartEditorProps> = ({
             textarea.value = finalNewValue;
             textarea.setSelectionRange(finalNewCaretPosition, finalNewCaretPosition);
             // eslint-disable-next-line
-            onTextChange({ ...e, target: textarea } as any);
+            onTextChange({...e, target: textarea} as any);
             return;
         }
 
@@ -467,7 +469,7 @@ const PartEditor: React.FC<PartEditorProps> = ({
             textarea.value = finalNewValue;
             textarea.setSelectionRange(finalNewCaretPosition, finalNewCaretPosition);
             // eslint-disable-next-line
-            onTextChange({ ...e, target: textarea } as any);
+            onTextChange({...e, target: textarea} as any);
             return;
         }
 
@@ -491,9 +493,9 @@ const PartEditor: React.FC<PartEditorProps> = ({
                 const textAfterInitialLogic = valueBeforeCleaning;
                 let caretAfterInitialLogic = caretBeforeCleaning;
 
-                const mergedLineStartForCheck = textAfterInitialLogic.lastIndexOf('\n', caretAfterInitialLogic -1) + 1;
+                const mergedLineStartForCheck = textAfterInitialLogic.lastIndexOf('\n', caretAfterInitialLogic - 1) + 1;
                 const mergedLineTextForCheck = textAfterInitialLogic.substring(mergedLineStartForCheck, textAfterInitialLogic.indexOf('\n', mergedLineStartForCheck) === -1 ? textAfterInitialLogic.length : textAfterInitialLogic.indexOf('\n', mergedLineStartForCheck));
-                if(isEmptyLine(mergedLineTextForCheck) && caretAfterInitialLogic > mergedLineStartForCheck + INDENT.length) {
+                if (isEmptyLine(mergedLineTextForCheck) && caretAfterInitialLogic > mergedLineStartForCheck + INDENT.length) {
                     caretAfterInitialLogic = mergedLineStartForCheck + INDENT.length;
                 }
 
@@ -509,7 +511,7 @@ const PartEditor: React.FC<PartEditorProps> = ({
                 textarea.value = finalNewValue;
                 textarea.setSelectionRange(finalNewCaretPosition, finalNewCaretPosition);
                 // eslint-disable-next-line
-                onTextChange({ ...e, target: textarea } as any);
+                onTextChange({...e, target: textarea} as any);
                 return;
             }
 
@@ -549,7 +551,7 @@ const PartEditor: React.FC<PartEditorProps> = ({
                 let caretAfterInitialLogic = caretBeforeCleaning;
 
                 const currentLineMergedTextForCheck = textAfterInitialLogic.substring(lineStart, textAfterInitialLogic.indexOf('\n', lineStart) === -1 ? textAfterInitialLogic.length : textAfterInitialLogic.indexOf('\n', lineStart));
-                if(isEmptyLine(currentLineMergedTextForCheck) && caretAfterInitialLogic > lineStart + INDENT.length) {
+                if (isEmptyLine(currentLineMergedTextForCheck) && caretAfterInitialLogic > lineStart + INDENT.length) {
                     caretAfterInitialLogic = lineStart + INDENT.length;
                 }
 
@@ -565,7 +567,7 @@ const PartEditor: React.FC<PartEditorProps> = ({
                 textarea.value = finalNewValue;
                 textarea.setSelectionRange(finalNewCaretPosition, finalNewCaretPosition);
                 // eslint-disable-next-line
-                onTextChange({ ...e, target: textarea } as any);
+                onTextChange({...e, target: textarea} as any);
                 return;
             }
         }
@@ -642,7 +644,7 @@ const PartEditor: React.FC<PartEditorProps> = ({
         }
 
 
-        if (isWithinOrAtStartOfIndent && value.substring(safeCurrentLineStart, safeCurrentLineStart + INDENT.length).startsWith(INDENT.substring(0,1))) {
+        if (isWithinOrAtStartOfIndent && value.substring(safeCurrentLineStart, safeCurrentLineStart + INDENT.length).startsWith(INDENT.substring(0, 1))) {
             const targetPos = safeCurrentLineStart + INDENT.length;
             if (selectionStart === selectionEnd) {
                 if (selectionStart < targetPos) {
@@ -722,6 +724,7 @@ const PartEditor: React.FC<PartEditorProps> = ({
                         placeholder="Введіть текст тут..."
                         spellCheck={true}
                         style={{minHeight: '0', height: 'auto', maxHeight: 'none', overflowY: 'hidden'}}
+                        disabled={disabled}
                     />
 
 
@@ -773,10 +776,10 @@ const PartEditor: React.FC<PartEditorProps> = ({
                 </div>
 
                 <div className="formatting-toolbar simplified">
-                    <button className="format-btn" title="Скасувати (Undo)" onClick={onUndo}>
+                    <button className="format-btn" disabled={disabled} title="Скасувати (Undo)" onClick={onUndo}>
                         <img src={undoIcon} alt="Undo"/>
                     </button>
-                    <button className="format-btn" title="Повторити (Redo)" onClick={onRedo}>
+                    <button className="format-btn" disabled={disabled} title="Повторити (Redo)" onClick={onRedo}>
                         <img src={redoIcon} alt="Redo"/>
                     </button>
                 </div>
