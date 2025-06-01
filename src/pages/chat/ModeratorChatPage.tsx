@@ -20,6 +20,7 @@ import closeChatIcon from "../../assets/close-chat.svg";
 import takeChatIcon from "../../assets/take-chat.svg";
 import sendIcon from "../../assets/send-icon.svg";
 import { ModeratorChatListItem } from "../../api/repositories/chatRepository.ts";
+import ConfirmationModal from "../../components/modals/deleteConfirmation/DeleteConfirmationModal.tsx";
 
 type ChatTab = "my" | "general" | "history";
 
@@ -33,6 +34,7 @@ const SELECTED_TAB_KEY = "moderator_selected_tab";
 const SELECTED_CHAT_ID_KEY = "moderator_selected_chat_id";
 const LIMIT = 20;
 
+// Додає/оновлює чат у списку
 function upsertChat(
     list: ModeratorChatListItem[],
     msg: NewMessageEvent,
@@ -85,10 +87,19 @@ const ModeratorChatPage: React.FC = () => {
     });
 
     const [messageInput, setMessageInput] = useState("");
-    const [searchValue, setSearchValue] = useState("");
     const [sending, setSending] = useState(false);
+    const [searchValue, setSearchValue] = useState("");
     const chatRestoredRef = useRef(false);
     const scrollToBottomRef = useRef(false);
+
+    // Додаємо стейт для модалки підтвердження закриття
+    const [closeChatModalOpen, setCloseChatModalOpen] = useState(false);
+    const handleShowCloseChatModal = () => setCloseChatModalOpen(true);
+    const handleCloseChatModalCancel = () => setCloseChatModalOpen(false);
+    const handleCloseChatModalConfirm = async () => {
+        setCloseChatModalOpen(false);
+        await handleCloseChat();
+    };
 
     const { generalChatsUnread, myChatsUnread, refetch: refetchUnreadCounts } = useModeratorUnreadCounts();
 
@@ -138,6 +149,7 @@ const ModeratorChatPage: React.FC = () => {
     const [localGeneralChats, setLocalGeneralChats] = useState<ModeratorChatListItem[]>([]);
     const [localHistoryChats, setLocalHistoryChats] = useState<ModeratorChatListItem[]>([]);
 
+    // Для повідомлень поточного чату
     const chatId = chat?.chat_id ?? null;
     const {
         messages,
@@ -146,6 +158,7 @@ const ModeratorChatPage: React.FC = () => {
         refetch: refetchMessages,
     } = useModeratorChatMessages(chatId, { offset: 0, limit: 50 });
 
+    // Локальні списки чатів
     useEffect(() => {
         if (!myChatsLoading && Array.isArray(myChats)) {
             if (myChatsOffset === 0) {
@@ -186,6 +199,7 @@ const ModeratorChatPage: React.FC = () => {
         }
     }, [historyChats, historyChatsLoading, historyChatsOffset]);
 
+    // Відновлення чату при завантаженні
     useEffect(() => {
         if (chatRestoredRef.current || !pendingChatId) return;
         let chatToRestore: ModeratorChatListItem | undefined;
@@ -219,6 +233,7 @@ const ModeratorChatPage: React.FC = () => {
         }
     }, [chat]);
 
+    // Якщо відкритий чат зник з усіх списків — закрити його (можливо після переміщення)
     useEffect(() => {
         if (
             chat &&
@@ -242,6 +257,7 @@ const ModeratorChatPage: React.FC = () => {
     if (selectedTab === "general") chatsLoading = generalChatsLoading;
     if (selectedTab === "history") chatsLoading = historyChatsLoading;
 
+    // Пошук
     useEffect(() => {
         const handler = setTimeout(() => {
             if (selectedTab === "my") {
@@ -262,15 +278,17 @@ const ModeratorChatPage: React.FC = () => {
         setMyChatsOffset, setGeneralChatsOffset, setHistoryChatsOffset,
     ]);
 
+    // Сокет-події
     const { assignChat, unassignChat, closeChat, sendMessage, markAsRead } = useModeratorChatActions();
 
+    // --- КЛЮЧОВА ЛОГІКА SOCKET ---
     const handleSocketMessage = useCallback((msg: NewMessageEvent) => {
         if (msg.chat_id === chatId) {
             refetchMessages();
             scrollToBottomRef.current = true;
         }
         setLocalGeneralChats(prev => upsertChat(prev, msg));
-        setLocalHistoryChats(prev => prev.filter(c=> c.user_id !== msg.user_id));
+        setLocalHistoryChats(prev => prev.filter(c => c.user_id !== msg.user_id));
         setLocalMyChats(prev => {
             const chatExists = prev.some(c => c.chat_id === msg.chat_id);
             if (chatExists) {
@@ -292,6 +310,7 @@ const ModeratorChatPage: React.FC = () => {
 
         refetchUnreadCounts();
     }, [chatId, selectedTab, refetchMessages, refetchUnreadCounts]);
+    // -----------------------------
 
     useEffect(() => {
         if (selectedTab === "my" && chatId) {
@@ -338,6 +357,7 @@ const ModeratorChatPage: React.FC = () => {
         }
     }, [messages, messagesLoading]);
 
+    // Автоматичне прочитання і локальний скидання бейджу
     const markAsReadSentRef = useRef<number | null>(null);
 
     useEffect(() => {
@@ -427,6 +447,7 @@ const ModeratorChatPage: React.FC = () => {
         }
     }, [messageInput]);
 
+    // handleCloseChat тепер викликається тільки після підтвердження!
     const handleCloseChat = async () => {
         if (!chat) return;
         setSending(true);
@@ -471,6 +492,7 @@ const ModeratorChatPage: React.FC = () => {
 
     const chatListRef = useRef<HTMLDivElement>(null);
 
+    // Infinite scroll: для поточної вкладки збільшуємо offset
     const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
         const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
         if (scrollHeight - scrollTop - clientHeight < 50) {
@@ -607,7 +629,7 @@ const ModeratorChatPage: React.FC = () => {
                                                 </button>
                                                 <button
                                                     className="chat-header-action close"
-                                                    onClick={handleCloseChat}
+                                                    onClick={handleShowCloseChatModal}
                                                     type="button"
                                                     disabled={sending}
                                                 >
@@ -682,28 +704,28 @@ const ModeratorChatPage: React.FC = () => {
                                             }}
                                             className="chats-send-message-form chats-send-message-form--with-bg"
                                         >
-                                           <textarea
-                                               ref={textareaRef}
-                                               value={messageInput}
-                                               onChange={e => setMessageInput(e.target.value)}
-                                               placeholder="Введіть повідомлення..."
-                                               className="chats-send-message-input"
-                                               disabled={sending}
-                                               rows={1}
-                                               style={{resize: "none", overflow: "hidden"}}
-                                               onKeyDown={e => {
-                                                   if (e.key === "Enter" && !e.shiftKey) {
-                                                       e.preventDefault();
-                                                       handleSendMessage();
-                                                   }
-                                               }}
-                                           />
+                                            <textarea
+                                                ref={textareaRef}
+                                                value={messageInput}
+                                                onChange={e => setMessageInput(e.target.value)}
+                                                placeholder="Введіть повідомлення..."
+                                                className="chats-send-message-input"
+                                                disabled={sending}
+                                                rows={1}
+                                                style={{ resize: "none", overflow: "hidden" }}
+                                                onKeyDown={e => {
+                                                    if (e.key === "Enter" && !e.shiftKey) {
+                                                        e.preventDefault();
+                                                        handleSendMessage();
+                                                    }
+                                                }}
+                                            />
                                             <button
                                                 type="submit"
                                                 disabled={sending || !messageInput.trim()}
                                                 className="send-btn"
                                             >
-                                                <img src={sendIcon} alt="Відправити"/>
+                                                <img src={sendIcon} alt="Відправити" />
                                             </button>
                                         </form>
                                     )}
@@ -713,6 +735,20 @@ const ModeratorChatPage: React.FC = () => {
                     )}
                 </div>
             </div>
+
+            <ConfirmationModal
+                open={closeChatModalOpen}
+                onClose={handleCloseChatModalCancel}
+                onConfirm={handleCloseChatModalConfirm}
+                confirmationTitle={
+                    chat
+                        ? `Ви впевнені, що хочете закрити чат з користувачем ${chat.user_first_name} ${chat.user_last_name}?`
+                        : "Ви впевнені, що хочете закрити чат?"
+                }
+                cancelButtonText="Скасувати"
+                confirmButtonText="Закрити чат"
+                reloadAfterDelete={false}
+            />
         </div>
     );
 };
