@@ -1,45 +1,23 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "./useAuth";
 import { Role } from "../types/role";
-import ChatRepository from "../api/repositories/chatRepository.ts";
-
-export interface ModeratorChatListItem {
-    chat_id: number;
-    user_full_name: string;
-    last_message: string;
-    last_message_sent_date: string;
-    unread_messages_count: number;
-    avatar?: string | null;
-}
-
-interface ChatMessage {
-    chat_message_id: number;
-    text: string;
-    sent_date: string;
-    is_written_by_moderator: boolean;
-}
-
-interface GetUserChatMessagesParams {
-    offset?: number;
-    limit?: number;
-}
-
-type ChatType = "general" | "assigned" | "closed";
-
-interface GetModeratorChatsParams {
-    type: ChatType;
-    offset: number;
-    limit: number;
-}
-
-interface ChatsResponse {
-    data: ModeratorChatListItem[];
-    error: boolean;
-}
+import ChatRepository, {
+    ChatMessage, GetModeratorChatsParams,
+    GetUserChatMessagesParams,
+    ModeratorChatListItem
+} from "../api/repositories/chatRepository.ts";
 
 const DEFAULT_ERROR_MESSAGE = "Щось пішло не так";
 
-export function useModeratorChatMessages(chatId: number | null, params: GetUserChatMessagesParams = {}) {
+interface UseModeratorChatsProps {
+    type: "assigned" | "general" | "closed";
+    initialSearch?: string;
+    limit?: number;
+    offset?: number;
+    debounceMs?: number;
+}
+
+export function useModeratorChatMessages(chatId: number | null, params: GetUserChatMessagesParams) {
     const { getToken } = useAuth();
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [loading, setLoading] = useState(false);
@@ -66,7 +44,9 @@ export function useModeratorChatMessages(chatId: number | null, params: GetUserC
             setLoading(true);
             setError(null);
             const token = getToken(Role.Moderator);
-            if (!token) throw new Error("Not authenticated");
+            if (!token) {
+                throw new Error("Not authenticated");
+            }
 
             const data = await ChatRepository.getModeratorChatMessages(token, chatId, params, abortController.signal);
 
@@ -108,17 +88,36 @@ export function useModeratorChatMessages(chatId: number | null, params: GetUserC
     return { messages, loading, error, refetch };
 }
 
-export function useModeratorChats(params: GetModeratorChatsParams) {
+export function useModeratorChats({
+                                      type,
+                                      initialSearch = "",
+                                      limit = 20,
+                                      offset = 0,
+                                      debounceMs = 400,
+                                  }: UseModeratorChatsProps) {
     const { getToken } = useAuth();
+
+    const [search, setSearch] = useState(initialSearch);
+    const [debouncedSearch, setDebouncedSearch] = useState(initialSearch);
+
+    const [currentOffset, setCurrentOffset] = useState(offset);
+
     const [chats, setChats] = useState<ModeratorChatListItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        const handler = setTimeout(() => {
+            setDebouncedSearch(search);
+            setCurrentOffset(0);
+        }, debounceMs);
+        return () => clearTimeout(handler);
+    }, [search, debounceMs]);
+
     const abortControllerRef = useRef<AbortController | null>(null);
 
     const fetchData = useCallback(async () => {
-        if (abortControllerRef.current) {
-            abortControllerRef.current.abort();
-        }
+        if (abortControllerRef.current) abortControllerRef.current.abort();
 
         const abortController = new AbortController();
         abortControllerRef.current = abortController;
@@ -126,25 +125,23 @@ export function useModeratorChats(params: GetModeratorChatsParams) {
         try {
             setLoading(true);
             setError(null);
+
             const token = getToken(Role.Moderator);
-            if (!token) throw new Error("Not authenticated");
+            if (!token) {
+                throw new Error("Not authenticated");
+            }
 
-            const response = await fetch(
-                `${import.meta.env.VITE_APP_API_BASE_URL}/chat/moderator/chats?${new URLSearchParams(params as any)}`,
-                {
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                    },
-                    signal: abortController.signal
-                }
-            );
+            const params: GetModeratorChatsParams = {
+                type,
+                search: debouncedSearch || undefined,
+                limit,
+                offset: currentOffset,
+            };
 
-            if (!response.ok) throw new Error("Failed to fetch chats");
-
-            const responseData: ChatsResponse = await response.json();
+            const data = await ChatRepository.getModeratorChats(token, params, abortController.signal);
 
             if (!abortController.signal.aborted) {
-                setChats(responseData.data || []);
+                setChats(data || []);
             }
         } catch (e: any) {
             if (!abortController.signal.aborted && e.name !== "AbortError") {
@@ -152,14 +149,10 @@ export function useModeratorChats(params: GetModeratorChatsParams) {
                 setChats([]);
             }
         } finally {
-            if (!abortController.signal.aborted) {
-                setLoading(false);
-            }
-            if (abortControllerRef.current === abortController) {
-                abortControllerRef.current = null;
-            }
+            if (!abortController.signal.aborted) setLoading(false);
+            if (abortControllerRef.current === abortController) abortControllerRef.current = null;
         }
-    }, [getToken, params]);
+    }, [getToken, type, debouncedSearch, limit, currentOffset]);
 
     useEffect(() => {
         fetchData();
@@ -171,7 +164,24 @@ export function useModeratorChats(params: GetModeratorChatsParams) {
         };
     }, [fetchData]);
 
-    return { chats, loading, error, refetch: fetchData };
+    const setPage = (page: number) => setCurrentOffset(page * limit);
+    const resetSearch = () => setSearch("");
+
+    const refetch = fetchData;
+
+    return {
+        chats,
+        loading,
+        error,
+        search,
+        setSearch,
+        debouncedSearch,
+        offset: currentOffset,
+        setPage,
+        setOffset: setCurrentOffset,
+        resetSearch,
+        refetch,
+    };
 }
 
 export function useModeratorUnreadCounts() {
@@ -187,18 +197,7 @@ export function useModeratorUnreadCounts() {
             return;
         }
         try {
-            const response = await fetch(
-                `${import.meta.env.VITE_APP_API_BASE_URL}/chat/moderator/unread-counts`,
-                {
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                    }
-                }
-            );
-
-            if (!response.ok) throw new Error("Failed to fetch unread counts");
-
-            const data = await response.json();
+            const data = await ChatRepository.getModeratorUnreadCounts(token);
             setGeneralChatsUnread(data.general_chats_count);
             setMyChatsUnread(data.assigned_chats_unread_messages_count);
         } catch {
