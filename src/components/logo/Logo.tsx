@@ -19,7 +19,7 @@ const Logo: React.FC<LogoProps> = ({onClick, premium, role}) => (
             <span className="logo-label">Модератор</span>
         )}
         {role === Role.Admin && (
-            <span className="logo-label">Адміністратор</span>
+            <span className="logo-label">Адмін</span>
         )}
     </div>
 
