@@ -43,6 +43,7 @@ import {flushSync} from "react-dom";
 import ParticipantsHeader from "../../components/participantsHeader/ParticipantsHeader.tsx";
 import StructureSidebar from "../../components/structureSidebar/StructureSidebar.tsx";
 import {useActiveTeleprompterData} from "../../hooks/useTeleprompterPresentation.ts";
+import {Role} from "../../types/role.ts";
 
 export interface PendingTextOp {
     operations: OperationComponent[];
@@ -95,7 +96,7 @@ const PresentationTextEditorPage: React.FC = () => {
     const presentationId = parseInt(presentationIdParam || "0", 10);
     const navigate = useNavigate();
 
-    const {profile} = useProfile();
+    const {profile} = useProfile(Role.User);
     const profileRef = useRef(profile);
     useEffect(() => {
         profileRef.current = profile;

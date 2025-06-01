@@ -349,14 +349,11 @@ const ModeratorChatPage: React.FC = () => {
         navigate("/login");
     };
 
-    const handleLogoClick = () => {
-        navigate("/dashboard");
-    };
 
     return (
         <div className="chats-main-container">
             <div className="chats-header-bar">
-                <Logo onClick={handleLogoClick} role={Role.Moderator} />
+                <Logo role={Role.Moderator} />
                 <RightHeaderButtons role={Role.Moderator} onLogout={handleLogout} />
             </div>
             <div className="chats-center-card">
