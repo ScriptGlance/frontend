@@ -134,7 +134,6 @@ export interface PresentationActiveJoinedUser {
 export interface PresentationActiveData {
     currentReadingPosition: PresentationActiveCurrentReadingPosition;
     structure: PresentationActiveStructureItem[];
-    userRecordedVideos: any[];
     currentPresentationStartDate?: string;
     currentOwnerUserId: number;
     joinedUsers: PresentationActiveJoinedUser[];
@@ -315,6 +314,34 @@ class PresentationsRepository {
             responseType: "blob"
         });
     }
+
+    public async uploadVideo(
+        token: string,
+        presentationId: number,
+        file: Blob | File,
+        partName: string,
+        partOrder: number,
+        startTimestamp: number
+    ): Promise<{ video_id: number }> {
+        const formData = new FormData();
+        formData.append("file", file, "video.webm");
+        formData.append("partName", partName);
+        formData.append("partOrder", String(partOrder));
+        formData.append("startTimestamp", String(startTimestamp));
+
+        const response = await apiClient.post(
+            `/presentations/${presentationId}/videos`,
+            formData,
+            {
+                headers: {
+                    "Authorization": `Bearer ${token}`,
+                }
+            }
+        );
+        if (response.error) throw new Error(response.description || "Failed to upload video");
+        return response.data;
+    }
+
 }
 
 export default PresentationsRepository.getInstance();
