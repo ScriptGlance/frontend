@@ -90,6 +90,8 @@ const UpdateProfileModal: React.FC<UpdateProfileModalProps> = ({
                             alt="Avatar"
                             size={78}
                             className="update-profile-avatar"
+                            name={firstName}
+                            surname={lastName}
                         />
                         <span className="update-profile-avatar-upload-circle">
                         <img

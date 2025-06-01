@@ -1,4 +1,4 @@
-import socketClient from "../socketClient.ts";
+import {SocketClient} from "../socketClient.ts";
 
 export enum PaymentEventType {
     CARD_LINKED = "card_linked",
@@ -9,26 +9,26 @@ export interface PaymentsEvent {
     event_type: PaymentEventType;
 }
 
-class PaymentsSocketManager {
-    public connect(token: string) {
-        socketClient.connect(token);
+export class PaymentsSocketManager {
+    private socketClient: SocketClient;
+
+    constructor(token: string) {
+        this.socketClient = new SocketClient(token, import.meta.env.VITE_APP_BASE_SOCKET_URL + "/payments");
     }
 
-    public subscribePayments() {
-        socketClient.emit("subscribe_payments");
+    public subscribePayments(): void {
+        this.socketClient.emit("subscribe_payments");
     }
 
-    public onPaymentsEvent(callback: (event: PaymentsEvent) => void) {
-        socketClient.on("payments_event", callback);
+    public onPaymentsEvent(callback: (event: PaymentsEvent) => void): void {
+        this.socketClient.on("payments_event", callback);
     }
 
-    public offPaymentsEvent(callback: (event: PaymentsEvent) => void) {
-        socketClient.off("payments_event", callback);
+    public offPaymentsEvent(callback: (event: PaymentsEvent) => void): void {
+        this.socketClient.off("payments_event", callback);
     }
 
-    public disconnect() {
-        socketClient.disconnect();
+    public disconnect(): void {
+        this.socketClient.disconnect();
     }
 }
-
-export default new PaymentsSocketManager();

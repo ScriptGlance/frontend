@@ -10,7 +10,7 @@ export interface LogoProps {
 }
 
 const Logo: React.FC<LogoProps> = ({onClick, premium, role}) => (
-    <div className="app-logo-block" onClick={onClick}>
+    <div className="app-logo-block" onClick={onClick} style={onClick ? {cursor: "pointer"} : undefined}>
         <img src={logo} alt="Logo" className="logo"/>
         {premium && (
             <span className="logo-label">Преміум</span>

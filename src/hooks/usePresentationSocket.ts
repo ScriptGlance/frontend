@@ -1,20 +1,36 @@
-import { useEffect } from "react";
-import presentationSocketManager, { PresentationEvent } from "../api/socket/presentationSocketManager";
-import {Role} from "../types/role.ts";
-import {useAuth} from "./useAuth.ts";
+import { useEffect, useRef } from "react";
+import { useAuth } from "./useAuth";
+import { Role } from "../types/role";
+import PresentationSocketManager, {PresentationEvent} from "../api/socket/presentationSocketManager.ts";
 
-export function usePresentationSocket(presentationId: number, onEvent: (event: PresentationEvent) => void) {
+export function usePresentationSocket(
+    presentationId: number,
+    onEvent: (event: PresentationEvent) => void
+) {
     const { getToken } = useAuth();
     const token = getToken(Role.User) || "";
+    const socketManagerRef = useRef<InstanceType<typeof PresentationSocketManager> | null>(null);
+
+    const stableCallbackRef = useRef(onEvent);
+    useEffect(() => {
+        stableCallbackRef.current = onEvent;
+    }, [onEvent]);
 
     useEffect(() => {
-        presentationSocketManager.connect(token);
+        if (!socketManagerRef.current) {
+            socketManagerRef.current = new PresentationSocketManager(token);
+        }
 
-        presentationSocketManager.subscribePresentation(presentationId);
-        presentationSocketManager.onPresentationEvent(onEvent);
+        const manager = socketManagerRef.current;
+        manager.subscribePresentation(presentationId);
+
+        const handler = (event: PresentationEvent) => stableCallbackRef.current(event);
+        manager.onPresentationEvent(handler);
 
         return () => {
-            presentationSocketManager.offPresentationEvent(onEvent);
+            manager.offPresentationEvent(handler);
+            manager.disconnect();
+            socketManagerRef.current = null;
         };
-    }, [presentationId, onEvent, token]);
+    }, [presentationId, token]);
 }
