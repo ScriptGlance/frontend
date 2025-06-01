@@ -1,4 +1,4 @@
-import {useMemo, useState, useEffect, useRef, useCallback} from "react";
+import {useCallback, useEffect, useMemo, useRef, useState} from "react";
 import illustration from "../../assets/dashboard-illustration.png";
 import filterIcon from "../../assets/filter.svg";
 import searchIcon from "../../assets/search.svg";
@@ -19,6 +19,7 @@ import {useProfile} from "../../hooks/ProfileContext.tsx";
 import {Presentation} from "../../api/repositories/presentationsRepository.ts";
 import {usePresentationGlobalActions} from "../../hooks/usePresentationActions.ts";
 import Logo from "../../components/logo/Logo.tsx";
+import {Role} from "../../types/role.ts";
 
 
 export const UserDashboardPage = () => {
@@ -61,7 +62,7 @@ export const UserDashboardPage = () => {
         }
     };
 
-    const {profile: currentUser, loading: profileLoading, error: profileError} = useProfile();
+    const {profile: currentUser, loading: profileLoading, error: profileError} = useProfile(Role.User);
 
     const queryParams = useMemo(() => ({
         type: selectedType,

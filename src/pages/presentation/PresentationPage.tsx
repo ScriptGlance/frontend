@@ -1,25 +1,20 @@
 import {useCallback, useEffect, useMemo, useRef, useState} from "react";
-import {useParams, useNavigate} from "react-router-dom";
+import {useNavigate, useParams} from "react-router-dom";
 import {useAuth} from "../../hooks/useAuth";
 import {Role} from "../../types/role";
 import {
     usePresentationDetails,
+    usePresentationJoinedUsers,
     usePresentationParticipants,
+    usePresentationsConfig,
     usePresentationStructure,
     usePresentationVideos,
-    usePresentationsConfig, usePresentationJoinedUsers,
 } from "../../hooks/usePresentationData";
-import {
-    usePresentationMutations,
-    usePresentationGlobalActions,
-} from "../../hooks/usePresentationActions";
+import {usePresentationGlobalActions, usePresentationMutations,} from "../../hooks/usePresentationActions";
 import {usePresentationSocket} from "../../hooks/usePresentationSocket";
-import {
-    PresentationEvent,
-    PresentationEventType,
-} from "../../api/socket/presentationSocketManager";
+import {PresentationEvent, PresentationEventType,} from "../../api/socket/presentationSocketManager";
 import RightHeaderButtons from "../../components/rightHeaderButtons/RightHeaderButtons";
-import {GreenButton, BeigeButton} from "../../components/appButton/AppButton";
+import {BeigeButton, GreenButton} from "../../components/appButton/AppButton";
 import {Avatar} from "../../components/avatar/Avatar";
 import {useProfile} from "../../hooks/ProfileContext";
 import editIcon from "../../assets/edit-icon.svg";
@@ -65,7 +60,7 @@ const PresentationPage = () => {
     const presentationId = parseInt(id || "0", 10);
     const navigate = useNavigate();
     const {logout} = useAuth();
-    const {profile} = useProfile();
+    const {profile} = useProfile(Role.User);
 
     const [detailsLoadedOnce, setDetailsLoadedOnce] = useState(false);
     const [participantsLoadedOnce, setParticipantsLoadedOnce] = useState(false);

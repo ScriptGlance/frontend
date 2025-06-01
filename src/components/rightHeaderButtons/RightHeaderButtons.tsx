@@ -22,7 +22,7 @@ const RightHeaderButtons = ({
                                 onLogout,
                                 role = Role.User,
                             }: RightHeaderButtonsProps) => {
-    const {profile, updateProfile, loading} = useProfile();
+    const {profile, updateProfile, loading} = useProfile(role);
     const [modalOpen, setModalOpen] = useState(false);
     const [premiumModalOpen, setPremiumModalOpen] = useState(false);
 

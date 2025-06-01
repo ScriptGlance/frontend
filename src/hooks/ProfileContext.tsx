@@ -1,83 +1,71 @@
+// ProfileContext.tsx
 import React, {
     createContext,
-    useContext,
-    useEffect,
-    useState,
-    useCallback,
-    ReactNode,
     Dispatch,
+    ReactNode,
     SetStateAction,
+    useContext,
 } from "react";
-import { UserProfile, UserProfileUpdateData } from "../api/repositories/userRepository";
-import userRepository from "../api/repositories/userRepository";
 import { useAuth } from "./useAuth";
 import { Role } from "../types/role";
 import { DEFAULT_ERROR_MESSAGE } from "../contstants.ts";
+import {
+    ModeratorProfile,
+    ModeratorProfileUpdateData,
+    moderatorRepository,
+    UserProfile,
+    UserProfileUpdateData,
+    userRepository
+} from "../api/repositories/profileRepository.ts";
+
+export type AnyProfile = UserProfile | ModeratorProfile;
+export type AnyProfileUpdate = UserProfileUpdateData | ModeratorProfileUpdateData;
 
 interface ProfileContextType {
-    profile: UserProfile | null;
-    loading: boolean;
-    error: string | null;
-    refreshProfile: () => Promise<void>;
-    updateProfile: (fields: UserProfileUpdateData) => Promise<void>;
-    setProfile: Dispatch<SetStateAction<UserProfile | null>>;
+    getProfile: (role: Role) => Promise<AnyProfile | null>;
+    updateProfile: (fields: AnyProfileUpdate, role: Role) => Promise<AnyProfile | null>;
+    setProfile: Dispatch<SetStateAction<AnyProfile | null>>;
 }
 
 const ProfileContext = createContext<ProfileContextType | undefined>(undefined);
 
 export const ProfileProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const { getToken } = useAuth();
-    const [profile, setProfile] = useState<UserProfile | null>(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
 
-    const fetchProfile = useCallback(async () => {
-        setLoading(true);
-        setError(null);
+    const getRepository = (role: Role) =>
+        role === Role.Moderator ? moderatorRepository : userRepository;
+
+    const getProfile = async (role: Role): Promise<AnyProfile | null> => {
+        if (!role) return null;
         try {
-            const token = getToken(Role.User);
+            const token = getToken(role);
             if (!token) throw new Error("Not authenticated");
-            const data = await userRepository.getProfile(token);
-            setProfile(data);
+            return await getRepository(role).getProfile(token);
         } catch {
-            setError(DEFAULT_ERROR_MESSAGE);
-        } finally {
-            setLoading(false);
+            return null;
         }
-    }, [getToken]);
+    };
 
-    useEffect(() => {
-        fetchProfile().then();
-    }, [fetchProfile]);
-
-    const updateProfile = useCallback(
-        async (fields: UserProfileUpdateData) => {
-            setLoading(true);
-            setError(null);
-            try {
-                const token = getToken(Role.User);
-                if (!token) throw new Error("Not authenticated");
-                const updated = await userRepository.updateProfile(token, fields);
-                setProfile(updated);
-            } catch (e) {
-                setError(DEFAULT_ERROR_MESSAGE);
-                throw e;
-            } finally {
-                setLoading(false);
-            }
-        },
-        [getToken]
-    );
+    const updateProfile = async (
+        fields: AnyProfileUpdate,
+        role: Role
+    ): Promise<AnyProfile | null> => {
+        if (!role) return null;
+        try {
+            const token = getToken(role);
+            if (!token) throw new Error("Not authenticated");
+            return await getRepository(role).updateProfile(token, fields as never);
+        } catch {
+            return null;
+        }
+    };
 
     return (
         <ProfileContext.Provider
             value={{
-                profile,
-                loading,
-                error,
-                refreshProfile: fetchProfile,
+                getProfile,
                 updateProfile,
-                setProfile,
+                setProfile: () => {},
             }}
         >
             {children}
@@ -85,8 +73,56 @@ export const ProfileProvider: React.FC<{ children: ReactNode }> = ({ children })
     );
 };
 
-export const useProfile = () => {
+import { useState, useEffect, useCallback } from "react";
+export const useProfile = (role: Role) => {
     const ctx = useContext(ProfileContext);
     if (!ctx) throw new Error("useProfile must be used within a ProfileProvider");
-    return ctx;
+    const { getProfile, updateProfile } = ctx;
+
+    const [profile, setProfile] = useState<AnyProfile | null>(null);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        let ignore = false;
+        setLoading(true);
+        setError(null);
+        getProfile(role)
+            .then((data) => {
+                if (!ignore) setProfile(data);
+            })
+            .catch(() => {
+                if (!ignore) setError(DEFAULT_ERROR_MESSAGE);
+            })
+            .finally(() => {
+                if (!ignore) setLoading(false);
+            });
+        return () => {
+            ignore = true;
+        };
+    }, [role, getProfile]);
+
+    const handleUpdateProfile = useCallback(
+        async (fields: AnyProfileUpdate) => {
+            setLoading(true);
+            setError(null);
+            try {
+                const updated = await updateProfile(fields, role);
+                setProfile(updated);
+            } catch {
+                setError(DEFAULT_ERROR_MESSAGE);
+            } finally {
+                setLoading(false);
+            }
+        },
+        [role, updateProfile]
+    );
+
+    return {
+        profile,
+        loading,
+        error,
+        updateProfile: handleUpdateProfile,
+        setProfile,
+    };
 };
