@@ -1,6 +1,7 @@
 import apiClient from '../axiosClient';
 
 export interface ChatMessage {
+    user_id: number;
     chat_message_id: number;
     text: string;
     is_written_by_moderator: boolean;
@@ -24,7 +25,9 @@ export interface UnreadCountResponse {
 
 export interface ModeratorChatListItem {
     chat_id: number;
-    user_full_name: string;
+    user_id: number;
+    user_first_name: string;
+    user_last_name: string;
     last_message: string;
     last_message_sent_date: string;
     unread_messages_count: number;
@@ -45,11 +48,12 @@ export interface ModeratorUnreadCountsResponse {
 }
 
 export interface GetUserChatMessagesParams {
-    offset?: number;
-    limit?: number;
+    offset: number;
+    limit: number;
 }
 
 export interface GetModeratorChatsParams {
+    search?: string;
     type: 'general' | 'assigned' | 'closed';
     offset?: number;
     limit?: number;
@@ -77,7 +81,7 @@ class ChatsRepository {
 
     public async getUserActiveChatMessages(
         token: string,
-        params: GetUserChatMessagesParams = {}
+        params: GetUserChatMessagesParams
     ): Promise<ChatMessage[]> {
         const res = await apiClient.get<UserChatMessagesResponse>(
             "/chat/user/active",
@@ -162,7 +166,7 @@ class ChatsRepository {
     public async getModeratorChatMessages(
         token: string,
         chatId: number,
-        params: GetUserChatMessagesParams = {},
+        params: GetUserChatMessagesParams,
         signal?: AbortSignal
     ): Promise<ChatMessage[]> {
         const res = await apiClient.get<UserChatMessagesResponse>(

@@ -7,12 +7,15 @@ export enum ChatEventType {
 }
 
 export interface NewMessageEvent {
+    user_id: number;
     chat_message_id: number;
     text: string;
+    avatar: string | null;
     is_written_by_moderator: boolean;
     sent_date: string;
     chat_id?: number;
-    user_full_name?: string;
+    user_first_name: string;
+    user_last_name: string;
     is_assigned?: boolean;
     is_new_chat?: boolean;
 }

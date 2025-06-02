@@ -688,7 +688,6 @@ const PartEditor: React.FC<PartEditorProps> = ({
         return () => {
             textarea.removeEventListener('keyup', handleCaretFix);
             textarea.removeEventListener('mouseup', handleCaretFix);
-            // textarea.removeEventListener('click', handleCaretFix);
             textarea.removeEventListener('focus', handleCaretFix);
         };
     }, [partId, text]);

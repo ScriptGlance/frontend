@@ -1,11 +1,11 @@
 import React, {useEffect, useRef, useState} from "react";
 import "./UpdateProfileModal.css";
-import {UserProfile} from "../../../api/repositories/userRepository.ts";
 import {AppInput} from "../../appInput/AppInput.tsx";
 import {Avatar} from "../../avatar/Avatar.tsx";
 import {GrayButton, GreenButton} from "../../appButton/AppButton.tsx";
 import BaseModal from "../base/BaseModal.tsx";
 import uploadIcon from "../../../assets/upload-icon.svg";
+import {UserProfile} from "../../../api/repositories/profileRepository.ts";
 
 export interface UpdateProfileModalProps {
     initialProfile: Pick<UserProfile, "first_name" | "last_name" | "avatar">;
