@@ -59,10 +59,6 @@ const ModeratorChatPage: React.FC = () => {
         () => localMyChats.reduce((sum, c) => sum + (c.unread_messages_count || 0), 0),
         [localMyChats]
     );
-    const generalChatsUnread = useMemo(
-        () => localGeneralChats.reduce((sum, c) => sum + (c.unread_messages_count || 0), 0),
-        [localGeneralChats]
-    );
 
     const chatsForCurrentTab = useMemo(() => {
         if (selectedTab === "my") return localMyChats;
