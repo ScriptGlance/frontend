@@ -17,7 +17,7 @@ interface UseModeratorChatsProps {
     debounceMs?: number;
 }
 
-export function useModeratorChatMessages(chatId: number | null, limit = 20) {
+export function useModeratorChatMessages(chatId: number | null, limit = 20, enabled = true) {
     const { getToken } = useAuth();
 
     const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -35,11 +35,11 @@ export function useModeratorChatMessages(chatId: number | null, limit = 20) {
     }, [chatId]);
 
     useEffect(() => {
+        if (!enabled) return;
         if (chatId) {
             fetchMessages(0, false);
         }
-        // eslint-disable-next-line
-    }, [chatId]);
+    }, [chatId, enabled]);
 
     const fetchMessages = useCallback(
         async (currentOffset = 0, append = false) => {
@@ -84,13 +84,6 @@ export function useModeratorChatMessages(chatId: number | null, limit = 20) {
         fetchMessages(nextOffset, true);
     }, [offset, limit, fetchMessages]);
 
-    useEffect(() => {
-        if (offset > 0 && chatId) {
-            fetchMessages(offset, true);
-        }
-        // eslint-disable-next-line
-    }, [offset, chatId]);
-
     const refetch = useCallback(() => {
         setOffset(0);
         fetchMessages(0, false);
@@ -105,6 +98,7 @@ export function useModeratorChatMessages(chatId: number | null, limit = 20) {
         loadMore,
         refetch,
         setMessages,
+        fetchMessages
     };
 }
 

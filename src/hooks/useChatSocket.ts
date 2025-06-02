@@ -1,10 +1,26 @@
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import ChatSocketManager, {
     NewMessageEvent,
     AssignmentChangeEvent,
 } from "../api/socket/chatSocketManager";
 import { useAuth } from "./useAuth";
 import { Role } from "../types/role";
+
+const chatSocketManagers: { [role: string]: ChatSocketManager | undefined } = {};
+
+export function getChatSocketManager(role: Role, token: string) {
+    if (!chatSocketManagers[role]) {
+        chatSocketManagers[role] = new ChatSocketManager(token);
+    }
+    return chatSocketManagers[role]!;
+}
+
+export function disconnectChatSocketManager(role: Role) {
+    if (chatSocketManagers[role]) {
+        chatSocketManagers[role]!.disconnect();
+        delete chatSocketManagers[role];
+    }
+}
 
 type UserChatHandlers = {
     role: Role.User;
@@ -24,13 +40,10 @@ type UseChatSocketProps = UserChatHandlers | ModeratorChatHandlers;
 export function useChatSocket(props: UseChatSocketProps) {
     const { getToken } = useAuth();
     const token = getToken(props.role) || "";
-    const chatSocketManagerRef = useRef<ChatSocketManager | null>(null);
 
     useEffect(() => {
         if (!token) return;
-
-        const manager = new ChatSocketManager(token);
-        chatSocketManagerRef.current = manager;
+        const manager = getChatSocketManager(props.role, token);
 
         if (props.role === Role.User) {
             manager.joinUserChat();
@@ -40,8 +53,6 @@ export function useChatSocket(props: UseChatSocketProps) {
             return () => {
                 manager.offUserNewMessage(props.onMessage);
                 manager.offUserChatClosed(props.onChatClosed);
-                manager.disconnect();
-                chatSocketManagerRef.current = null;
             };
         }
 
@@ -55,15 +66,9 @@ export function useChatSocket(props: UseChatSocketProps) {
                 manager.offModeratorNewMessage(props.onMessage);
                 manager.offModeratorChatClosed(props.onChatClosed);
                 manager.offAssignmentChange(props.onAssignmentChange);
-                manager.disconnect();
-                chatSocketManagerRef.current = null;
             };
         }
 
-        return () => {
-            manager.disconnect();
-            chatSocketManagerRef.current = null;
-        };
-        // eslint-disable-next-line
+        return () => {};
     }, [token, props]);
 }

@@ -1,19 +1,19 @@
-import { useState, useEffect } from "react";
-import { GreenButton } from "../appButton/AppButton";
+import {useEffect, useState} from "react";
+import {GreenButton} from "../appButton/AppButton";
 import RoundButton from "../roundButton/RoundButton";
-import { Avatar } from "../avatar/Avatar";
+import {Avatar} from "../avatar/Avatar";
 import chatIcon from "../../assets/chat.svg";
 import logoutIcon from "../../assets/logout.svg";
 import './RightHeaderButtons.css';
-import { useProfile } from "../../hooks/ProfileContext.tsx";
+import {useProfile} from "../../hooks/ProfileContext.tsx";
 import UpdateProfileModal from "../modals/updateProfile/UpdateProfileModal.tsx";
 import PremiumSubscriptionModal from "../modals/subscriptionStatus/SubscriptionStatusModal.tsx";
 import BuySubscriptionModal from "../modals/buySubscription/BuySubscriptionModal.tsx";
-import { Role } from "../../types/role.ts";
-import { UserChatWindow } from "../draggableWindow/userChat/UserChatWindow.tsx";
-import { useUserUnreadCount } from "../../hooks/useChat";
-import { useChatSocket } from "../../hooks/useChatSocket";
-import { Role as AppRole } from "../../types/role";
+import {Role} from "../../types/role.ts";
+import {UserChatWindow} from "../draggableWindow/userChat/UserChatWindow.tsx";
+import {useUserUnreadCount} from "../../hooks/useChat";
+import {disconnectChatSocketManager, useChatSocket} from "../../hooks/useChatSocket";
+import {Role as AppRole} from "../../types/role";
 import {UserProfile} from "../../api/repositories/profileRepository.ts";
 
 interface RightHeaderButtonsProps {
@@ -27,13 +27,13 @@ const RightHeaderButtons = ({
                                 onLogout,
                                 role = Role.User,
                             }: RightHeaderButtonsProps) => {
-    const { profile, updateProfile, loading } = useProfile(role);
+    const {profile, updateProfile, loading} = useProfile(role);
     const [modalOpen, setModalOpen] = useState(false);
     const [premiumModalOpen, setPremiumModalOpen] = useState(false);
 
     const [chatOpen, setChatOpen] = useState(false);
 
-    const { unread, refetch: refetchUnread } = useUserUnreadCount();
+    const {unread, refetch: refetchUnread} = useUserUnreadCount();
 
     useChatSocket({
         role: AppRole.User,
@@ -67,7 +67,7 @@ const RightHeaderButtons = ({
     }, [chatOpen, refetchUnread]);
 
     return (
-        <div className="header-buttons" style={{ position: "relative" }}>
+        <div className="header-buttons" style={{position: "relative"}}>
             {role === Role.User && (
                 <GreenButton
                     label={(profile as UserProfile | undefined)?.has_premium ? "Керувати підпискою" : "Купити преміум"}
@@ -76,9 +76,9 @@ const RightHeaderButtons = ({
                 />
             )}
             {role === Role.User && (
-                <div style={{ position: "relative", display: "inline-block" }}>
+                <div style={{position: "relative", display: "inline-block"}}>
                     <RoundButton
-                        icon={<img src={chatIcon} alt="Чат" />}
+                        icon={<img src={chatIcon} alt="Чат"/>}
                         ariaLabel="Чат"
                         className="round-btn"
                         onClick={handleChatClick}
@@ -119,10 +119,15 @@ const RightHeaderButtons = ({
                 surname={profile?.last_name || ""}
             />
             <RoundButton
-                icon={<img src={logoutIcon} alt="Вихід" />}
+                icon={<img src={logoutIcon} alt="Вихід"/>}
                 ariaLabel="Вихід"
                 className="round-btn"
-                onClick={onLogout}
+                onClick={() => {
+                    if(onLogout) {
+                        disconnectChatSocketManager(Role.User);
+                        onLogout();
+                    }
+                }}
             />
             {profile && (
                 <UpdateProfileModal
