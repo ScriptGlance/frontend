@@ -26,9 +26,18 @@ import takeChatIcon from "../../assets/take-chat.svg";
 import sendIcon from "../../assets/send-icon.svg";
 import { ModeratorChatListItem } from "../../api/repositories/chatRepository.ts";
 import ConfirmationModal from "../../components/modals/deleteConfirmation/DeleteConfirmationModal.tsx";
-import { useChatSocket } from "../../hooks/useChatSocket.ts";
+import {disconnectChatSocketManager, useChatSocket} from "../../hooks/useChatSocket.ts";
 
 type ChatTab = "my" | "general" | "history";
+
+function uniqueByMessageId(messages: any[]) {
+    const seen = new Set();
+    return messages.filter(message => {
+        if (seen.has(message.chat_message_id)) return false;
+        seen.add(message.chat_message_id);
+        return true;
+    });
+}
 
 const CHAT_TABS: { label: string; value: ChatTab }[] = [
     { label: "Мої чати", value: "my" },
@@ -96,8 +105,8 @@ const ModeratorChatPage: React.FC = () => {
     const [searchValue, setSearchValue] = useState("");
     const chatRestoredRef = useRef(false);
     const scrollToBottomRef = useRef(false);
-
     const [closeChatModalOpen, setCloseChatModalOpen] = useState(false);
+
     const handleShowCloseChatModal = () => setCloseChatModalOpen(true);
     const handleCloseChatModalCancel = () => setCloseChatModalOpen(false);
     const handleCloseChatModalConfirm = async () => {
@@ -155,14 +164,7 @@ const ModeratorChatPage: React.FC = () => {
 
     const chatId = chat?.chat_id ?? null;
 
-    const {
-        messages,
-        loading: messagesLoading,
-        error: messagesError,
-        hasMore,
-        loadMore,
-        refetch: refetchMessages,
-    } = useModeratorChatMessages(chatId);
+    const { messages, fetchMessages, loadMore, hasMore, loading: messagesLoading, error: messagesError } = useModeratorChatMessages(chatId, 20, selectedTab === 'my');
 
     const messagesContainerRef = useRef<HTMLDivElement>(null);
     const prevScrollHeightRef = useRef<number | null>(null);
@@ -172,40 +174,36 @@ const ModeratorChatPage: React.FC = () => {
             if (myChatsOffset === 0) {
                 setLocalMyChats(myChats);
             } else {
-                setLocalMyChats(prev => {
-                    const existingIds = new Set(prev.map(c => c.chat_id));
-                    const newChats = myChats.filter(c => !existingIds.has(c.chat_id));
-                    return [...prev, ...newChats];
-                });
+                setLocalMyChats(prev => [...prev, ...myChats]);
             }
         }
     }, [myChats, myChatsLoading, myChatsOffset]);
+
     useEffect(() => {
         if (!generalChatsLoading && Array.isArray(generalChats)) {
             if (generalChatsOffset === 0) {
                 setLocalGeneralChats(generalChats);
             } else {
-                setLocalGeneralChats(prev => {
-                    const existingIds = new Set(prev.map(c => c.chat_id));
-                    const newChats = generalChats.filter(c => !existingIds.has(c.chat_id));
-                    return [...prev, ...newChats];
-                });
+                setLocalGeneralChats(prev => [...prev, ...generalChats]);
             }
         }
     }, [generalChats, generalChatsLoading, generalChatsOffset]);
+
     useEffect(() => {
         if (!historyChatsLoading && Array.isArray(historyChats)) {
             if (historyChatsOffset === 0) {
                 setLocalHistoryChats(historyChats);
             } else {
-                setLocalHistoryChats(prev => {
-                    const existingIds = new Set(prev.map(c => c.chat_id));
-                    const newChats = historyChats.filter(c => !existingIds.has(c.chat_id));
-                    return [...prev, ...newChats];
-                });
+                setLocalHistoryChats(prev => [...prev, ...historyChats]);
             }
         }
     }, [historyChats, historyChatsLoading, historyChatsOffset]);
+
+    useEffect(() => {
+        if (chatId && selectedTab === "my") {
+            fetchMessages(0, false);
+        }
+    }, [chatId, selectedTab, fetchMessages]);
 
     useEffect(() => {
         if (chatRestoredRef.current || !pendingChatId) return;
@@ -316,7 +314,7 @@ const ModeratorChatPage: React.FC = () => {
             }
 
             if (msg.chat_id === chatId) {
-                refetchMessages();
+                fetchMessages(0, false);
                 scrollToBottomRef.current = true;
             }
             setLocalGeneralChats(prev => upsertChat(prev, msg));
@@ -347,7 +345,7 @@ const ModeratorChatPage: React.FC = () => {
             chatId,
             selectedTab,
             markAsRead,
-            refetchMessages,
+            fetchMessages,
             refetchUnreadCounts,
             setLocalMyChats,
             setLocalGeneralChats,
@@ -419,6 +417,7 @@ const ModeratorChatPage: React.FC = () => {
             prevScrollHeightRef.current = null;
         }
     }, [messages]);
+
 
     const markAsReadSentRef = useRef<number | null>(null);
 
@@ -534,7 +533,7 @@ const ModeratorChatPage: React.FC = () => {
         const messageText = messageInput.trim();
         try {
             await sendMessage(chat.chat_id, messageText);
-            await refetchMessages();
+            await fetchMessages(0, false);
             setMessageInput("");
             scrollToBottomRef.current = true;
             if (textareaRef.current) {
@@ -551,6 +550,7 @@ const ModeratorChatPage: React.FC = () => {
     const handleLogout = () => {
         localStorage.removeItem(SELECTED_TAB_KEY);
         localStorage.removeItem(SELECTED_CHAT_ID_KEY);
+        disconnectChatSocketManager(Role.Moderator);
         logout(Role.Moderator);
         navigate("/moderator/login");
     };
@@ -776,7 +776,7 @@ const ModeratorChatPage: React.FC = () => {
                                             <div className="chats-error">Помилка завантаження повідомлень</div>
                                         ) : (
                                             <>
-                                                {messages
+                                                {uniqueByMessageId(messages)
                                                     .slice()
                                                     .sort(
                                                         (a, b) =>
