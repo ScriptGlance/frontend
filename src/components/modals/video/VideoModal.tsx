@@ -24,7 +24,7 @@ export interface VideoModalProps {
             start_date: string;
             end_date: string;
         };
-        video_duration: number; // ms
+        video_duration: number;
     } | null;
     onDelete?: () => void;
 }

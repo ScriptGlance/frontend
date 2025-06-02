@@ -7,7 +7,8 @@ import StructureSidebar, {SidebarPart} from '../../components/structureSidebar/S
 import {
     usePresentationDetails,
     usePresentationParticipants,
-    usePresentationsConfig, usePresentationVideos
+    usePresentationsConfig,
+    usePresentationVideos
 } from '../../hooks/usePresentationData';
 import {
     Participant,
@@ -17,7 +18,9 @@ import {
 import {usePresentationParts} from "../../hooks/usePresentationParts.ts";
 
 import {
-    useActiveTeleprompterData, useConfirmActiveReader, useParticipantsVideosLeft,
+    useActiveTeleprompterData,
+    useConfirmActiveReader,
+    useParticipantsVideosLeft,
     useSetActiveReader,
     useSetTeleprompterRecordingMode,
     useStartPresentation,
@@ -45,12 +48,15 @@ import {useTeleprompterVideoRecorder} from "../../hooks/useTeleprompterVideoReco
 import {getNotUploadedVideoCount} from "../../api/repositories/videoStorageRepository.ts";
 import {
     IncomingReadingPositionPayload,
-    OwnerChangedPayload, PartReassignReason,
-    PresenceEventType, RecordingModeChangedPayload,
+    OwnerChangedPayload,
+    PartReassignReason,
+    PresenceEventType,
+    RecordingModeChangedPayload,
     TeleprompterPresencePayload
 } from "../../api/socket/teleprompterPresentationSocketManager.ts";
 import {SnackbarProps} from "../../components/snackbar/Snackbar.tsx";
 import {PUNCTUATION_REGEX} from "../../contstants.ts";
+import {Role} from "../../types/role.ts";
 
 interface CustomSpeechRecognition extends SpeechRecognition {
     continuous: boolean;
@@ -68,7 +74,7 @@ const WAITING_FOR_USER_SNACKBAR_KEY = 'waiting-for-user';
 const TeleprompterPage: React.FC = () => {
     const {id: presentationIdParam} = useParams<{ id: string }>();
     const presentationId = parseInt(presentationIdParam || "0", 10);
-    const {profile} = useProfile();
+    const {profile} = useProfile(Role.User);
 
     const profileRef = useRef(profile);
 

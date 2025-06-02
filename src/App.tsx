@@ -88,6 +88,15 @@ function App() {
                         />
 
                         <Route
+                            path="/moderator/dashboard"
+                            element={
+                                <ProtectedRoute role={Role.Moderator}>
+                                    <ModeratorChatPage/>
+                                </ProtectedRoute>
+                            }
+                        />
+
+                        <Route
                             path="/admin/dashboard"
                             element={
                                 <ProtectedRoute role={Role.Admin}>
