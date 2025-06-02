@@ -21,6 +21,8 @@ import TeleprompterPage from "./pages/teleprompter/TeleprompterPage.tsx";
 import {useAuth} from "./hooks/useAuth.ts";
 import {VideoUploadQueueProvider} from "./hooks/VideoUploadQueueProvider.tsx";
 import PresentationPage from "./pages/presentation/PresentationPage.tsx";
+import PrivacyPolicyPage from "./pages/static/PrivacyPolicyPage.tsx";
+import UserDataDeletionPage from "./pages/static/UserDataDeletionPage.tsx";
 
 function App() {
     const {getToken} = useAuth();
@@ -123,6 +125,8 @@ function App() {
 
                         <Route path="/invite/:code" element={<InviteAcceptPage/>}/>
                         <Route path="/video/:shareCode" element={<VideoPlayerPage/>}/>
+                        <Route path="privacy-policy" element={<PrivacyPolicyPage/>}/>
+                        <Route path="user-data-deletion" element={<UserDataDeletionPage/>}/>
 
                         <Route path="*" element={<NotFound/>}/>
                     </Routes>
