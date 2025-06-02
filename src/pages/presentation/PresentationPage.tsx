@@ -541,6 +541,7 @@ const PresentationPage = () => {
                 confirmationInputValue={presentation?.name}
                 cancelButtonText="Скасувати"
                 confirmButtonText="Так, видалити"
+                reloadAfterDelete={false}
             />
             <VideoModal
                 open={videoModalOpen}
