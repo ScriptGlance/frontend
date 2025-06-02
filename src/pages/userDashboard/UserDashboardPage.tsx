@@ -20,6 +20,7 @@ import {Presentation} from "../../api/repositories/presentationsRepository.ts";
 import {usePresentationGlobalActions} from "../../hooks/usePresentationActions.ts";
 import Logo from "../../components/logo/Logo.tsx";
 import {Role} from "../../types/role.ts";
+import {UserProfile} from "../../api/repositories/profileRepository.ts";
 
 
 export const UserDashboardPage = () => {
@@ -141,7 +142,7 @@ export const UserDashboardPage = () => {
         if (!currentUser) return;
         setPresentations(prev =>
             prev.map(p =>
-                p.owner.user_id === currentUser.user_id
+                p.owner.user_id === (currentUser as UserProfile | undefined)?.user_id
                     ? {...p, owner: {...p.owner, ...currentUser}}
                     : p
             )
@@ -152,7 +153,7 @@ export const UserDashboardPage = () => {
         <div className="dashboard-layout">
             <header className="dashboard-header">
                 <div className="welcome-section">
-                    <Logo premium={currentUser?.has_premium} />
+                    <Logo premium={(currentUser as UserProfile | undefined)?.has_premium} />
                     <h1 className="welcome-title">
                         {profileLoading ? "Завантаження..." : `Вітаю, ${currentUser?.first_name || "Користувач"}!`}
                     </h1>
@@ -166,8 +167,7 @@ export const UserDashboardPage = () => {
                 </div>
                 <div className="header-right">
                     <RightHeaderButtons
-                        onChat={() => {/* TODO: handle open chat */
-                        }}
+                        onChat={() => {}}
                         onLogout={handleLogout}
                     />
                     <div className="stats-cards">

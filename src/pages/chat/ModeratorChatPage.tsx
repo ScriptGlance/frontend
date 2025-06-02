@@ -1,4 +1,10 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, {
+    useCallback,
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
+} from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
 import { Role } from "../../types/role";
@@ -8,7 +14,6 @@ import {
     useModeratorUnreadCounts,
     useModeratorChatMessages,
 } from "../../hooks/useChat";
-import { useModeratorChatSocket } from "../../hooks/useChatSocket";
 import { Avatar } from "../../components/avatar/Avatar";
 import Logo from "../../components/logo/Logo";
 import searchIcon from "../../assets/search.svg";
@@ -21,6 +26,7 @@ import takeChatIcon from "../../assets/take-chat.svg";
 import sendIcon from "../../assets/send-icon.svg";
 import { ModeratorChatListItem } from "../../api/repositories/chatRepository.ts";
 import ConfirmationModal from "../../components/modals/deleteConfirmation/DeleteConfirmationModal.tsx";
+import { useChatSocket } from "../../hooks/useChatSocket.ts";
 
 type ChatTab = "my" | "general" | "history";
 
@@ -32,9 +38,8 @@ const CHAT_TABS: { label: string; value: ChatTab }[] = [
 
 const SELECTED_TAB_KEY = "moderator_selected_tab";
 const SELECTED_CHAT_ID_KEY = "moderator_selected_chat_id";
-const LIMIT = 20;
+const LIMIT = 1000;
 
-// Додає/оновлює чат у списку
 function upsertChat(
     list: ModeratorChatListItem[],
     msg: NewMessageEvent,
@@ -52,9 +57,9 @@ function upsertChat(
                 last_message: msg.text,
                 last_message_sent_date: msg.sent_date,
                 unread_messages_count: 1,
-                ...getDefaults(msg)
+                ...getDefaults(msg),
             },
-            ...list
+            ...list,
         ];
     }
     return list.map(c =>
@@ -63,7 +68,7 @@ function upsertChat(
                 ...c,
                 last_message: msg.text,
                 last_message_sent_date: msg.sent_date,
-                unread_messages_count: (c.unread_messages_count || 0) + 1
+                unread_messages_count: (c.unread_messages_count || 0) + 1,
             }
             : c
     );
@@ -75,8 +80,8 @@ const ModeratorChatPage: React.FC = () => {
 
     const [selectedTab, setSelectedTab] = useState<ChatTab>(() => {
         const savedTab = localStorage.getItem(SELECTED_TAB_KEY);
-        return (savedTab === "my" || savedTab === "general" || savedTab === "history")
-            ? savedTab as ChatTab
+        return savedTab === "my" || savedTab === "general" || savedTab === "history"
+            ? (savedTab as ChatTab)
             : "my";
     });
 
@@ -92,7 +97,6 @@ const ModeratorChatPage: React.FC = () => {
     const chatRestoredRef = useRef(false);
     const scrollToBottomRef = useRef(false);
 
-    // Додаємо стейт для модалки підтвердження закриття
     const [closeChatModalOpen, setCloseChatModalOpen] = useState(false);
     const handleShowCloseChatModal = () => setCloseChatModalOpen(true);
     const handleCloseChatModalCancel = () => setCloseChatModalOpen(false);
@@ -109,7 +113,7 @@ const ModeratorChatPage: React.FC = () => {
         setSearch: setMyChatsSearch,
         offset: myChatsOffset,
         setOffset: setMyChatsOffset,
-        refetch: refetchMyChats
+        refetch: refetchMyChats,
     } = useModeratorChats({
         type: "assigned",
         initialSearch: selectedTab === "my" ? searchValue : "",
@@ -123,7 +127,7 @@ const ModeratorChatPage: React.FC = () => {
         setSearch: setGeneralChatsSearch,
         offset: generalChatsOffset,
         setOffset: setGeneralChatsOffset,
-        refetch: refetchGeneralChats
+        refetch: refetchGeneralChats,
     } = useModeratorChats({
         type: "general",
         initialSearch: selectedTab === "general" ? searchValue : "",
@@ -137,7 +141,7 @@ const ModeratorChatPage: React.FC = () => {
         setSearch: setHistoryChatsSearch,
         offset: historyChatsOffset,
         setOffset: setHistoryChatsOffset,
-        refetch: refetchHistoryChats
+        refetch: refetchHistoryChats,
     } = useModeratorChats({
         type: "closed",
         initialSearch: selectedTab === "history" ? searchValue : "",
@@ -149,16 +153,20 @@ const ModeratorChatPage: React.FC = () => {
     const [localGeneralChats, setLocalGeneralChats] = useState<ModeratorChatListItem[]>([]);
     const [localHistoryChats, setLocalHistoryChats] = useState<ModeratorChatListItem[]>([]);
 
-    // Для повідомлень поточного чату
     const chatId = chat?.chat_id ?? null;
+
     const {
         messages,
         loading: messagesLoading,
         error: messagesError,
+        hasMore,
+        loadMore,
         refetch: refetchMessages,
-    } = useModeratorChatMessages(chatId, { offset: 0, limit: 50 });
+    } = useModeratorChatMessages(chatId);
 
-    // Локальні списки чатів
+    const messagesContainerRef = useRef<HTMLDivElement>(null);
+    const prevScrollHeightRef = useRef<number | null>(null);
+
     useEffect(() => {
         if (!myChatsLoading && Array.isArray(myChats)) {
             if (myChatsOffset === 0) {
@@ -199,7 +207,6 @@ const ModeratorChatPage: React.FC = () => {
         }
     }, [historyChats, historyChatsLoading, historyChatsOffset]);
 
-    // Відновлення чату при завантаженні
     useEffect(() => {
         if (chatRestoredRef.current || !pendingChatId) return;
         let chatToRestore: ModeratorChatListItem | undefined;
@@ -216,10 +223,14 @@ const ModeratorChatPage: React.FC = () => {
             setPendingChatId(null);
         }
     }, [
-        pendingChatId, selectedTab,
-        myChatsLoading, localMyChats,
-        generalChatsLoading, localGeneralChats,
-        historyChatsLoading, localHistoryChats
+        pendingChatId,
+        selectedTab,
+        myChatsLoading,
+        localMyChats,
+        generalChatsLoading,
+        localGeneralChats,
+        historyChatsLoading,
+        localHistoryChats,
     ]);
 
     useEffect(() => {
@@ -233,7 +244,6 @@ const ModeratorChatPage: React.FC = () => {
         }
     }, [chat]);
 
-    // Якщо відкритий чат зник з усіх списків — закрити його (можливо після переміщення)
     useEffect(() => {
         if (
             chat &&
@@ -257,7 +267,6 @@ const ModeratorChatPage: React.FC = () => {
     if (selectedTab === "general") chatsLoading = generalChatsLoading;
     if (selectedTab === "history") chatsLoading = historyChatsLoading;
 
-    // Пошук
     useEffect(() => {
         const handler = setTimeout(() => {
             if (selectedTab === "my") {
@@ -273,60 +282,97 @@ const ModeratorChatPage: React.FC = () => {
         }, 400);
         return () => clearTimeout(handler);
     }, [
-        searchValue, selectedTab,
-        setMyChatsSearch, setGeneralChatsSearch, setHistoryChatsSearch,
-        setMyChatsOffset, setGeneralChatsOffset, setHistoryChatsOffset,
+        searchValue,
+        selectedTab,
+        setMyChatsSearch,
+        setGeneralChatsSearch,
+        setHistoryChatsSearch,
+        setMyChatsOffset,
+        setGeneralChatsOffset,
+        setHistoryChatsOffset,
     ]);
 
-    // Сокет-події
     const { assignChat, unassignChat, closeChat, sendMessage, markAsRead } = useModeratorChatActions();
 
-    // --- КЛЮЧОВА ЛОГІКА SOCKET ---
-    const handleSocketMessage = useCallback((msg: NewMessageEvent) => {
-        if (msg.chat_id === chatId) {
-            refetchMessages();
-            scrollToBottomRef.current = true;
-        }
-        setLocalGeneralChats(prev => upsertChat(prev, msg));
-        setLocalHistoryChats(prev => prev.filter(c => c.user_id !== msg.user_id));
-        setLocalMyChats(prev => {
-            const chatExists = prev.some(c => c.chat_id === msg.chat_id);
-            if (chatExists) {
-                return prev.map(c =>
-                    c.chat_id === msg.chat_id
-                        ? {
-                            ...c,
-                            unread_messages_count: (selectedTab === "my" && chatId === msg.chat_id)
-                                ? 0
-                                : (c.unread_messages_count || 0) + 1,
-                            last_message: msg.text,
-                            last_message_sent_date: msg.sent_date,
-                        }
-                        : c
-                );
+    const handleSocketMessage = useCallback(
+        (msg: NewMessageEvent) => {
+            if (
+                selectedTab === "my" &&
+                chatId === msg.chat_id &&
+                !msg.is_written_by_moderator
+            ) {
+                markAsRead(msg.chat_id)
+                    .catch(console.error)
+                    .finally(() => {
+                        refetchUnreadCounts();
+                        setLocalMyChats(prev =>
+                            prev.map(c =>
+                                c.chat_id === msg.chat_id
+                                    ? { ...c, unread_messages_count: 0 }
+                                    : c
+                            )
+                        );
+                    });
             }
-            return prev;
-        });
 
-        refetchUnreadCounts();
-    }, [chatId, selectedTab, refetchMessages, refetchUnreadCounts]);
-    // -----------------------------
+            if (msg.chat_id === chatId) {
+                refetchMessages();
+                scrollToBottomRef.current = true;
+            }
+            setLocalGeneralChats(prev => upsertChat(prev, msg));
+            setLocalHistoryChats(prev => prev.filter(c => c.user_id !== msg.user_id));
+            setLocalMyChats(prev => {
+                const chatExists = prev.some(c => c.chat_id === msg.chat_id);
+                if (chatExists) {
+                    return prev.map(c =>
+                        c.chat_id === msg.chat_id
+                            ? {
+                                ...c,
+                                unread_messages_count:
+                                    selectedTab === "my" && chatId === msg.chat_id
+                                        ? 0
+                                        : (c.unread_messages_count || 0) + 1,
+                                last_message: msg.text,
+                                last_message_sent_date: msg.sent_date,
+                            }
+                            : c
+                    );
+                }
+                return prev;
+            });
+
+            refetchUnreadCounts();
+        },
+        [
+            chatId,
+            selectedTab,
+            markAsRead,
+            refetchMessages,
+            refetchUnreadCounts,
+            setLocalMyChats,
+            setLocalGeneralChats,
+            setLocalHistoryChats,
+        ]
+    );
 
     useEffect(() => {
         if (selectedTab === "my" && chatId) {
             setLocalMyChats(prev =>
-                prev.map(c => c.chat_id === chatId ? { ...c, unread_messages_count: 0 } : c)
+                prev.map(c => (c.chat_id === chatId ? { ...c, unread_messages_count: 0 } : c))
             );
         }
     }, [selectedTab, chatId]);
 
-    const handleSocketChatClose = useCallback((data: any) => {
-        if (chat && data && chat.chat_id === (data.chat_id ?? data.chatId)) setChat(null);
-        refetchMyChats();
-        refetchGeneralChats();
-        refetchHistoryChats();
-        refetchUnreadCounts();
-    }, [chat, refetchMyChats, refetchGeneralChats, refetchHistoryChats, refetchUnreadCounts]);
+    const handleSocketChatClose = useCallback(
+        (data: any) => {
+            if (chat && data && chat.chat_id === (data.chat_id ?? data.chatId)) setChat(null);
+            refetchMyChats();
+            refetchGeneralChats();
+            refetchHistoryChats();
+            refetchUnreadCounts();
+        },
+        [chat, refetchMyChats, refetchGeneralChats, refetchHistoryChats, refetchUnreadCounts]
+    );
 
     const handleSocketAssignmentChange = useCallback(() => {
         setMyChatsOffset(0);
@@ -336,13 +382,22 @@ const ModeratorChatPage: React.FC = () => {
         refetchGeneralChats();
         refetchHistoryChats();
         refetchUnreadCounts();
-    }, [setMyChatsOffset, setGeneralChatsOffset, setHistoryChatsOffset, refetchMyChats, refetchGeneralChats, refetchHistoryChats, refetchUnreadCounts]);
+    }, [
+        setMyChatsOffset,
+        setGeneralChatsOffset,
+        setHistoryChatsOffset,
+        refetchMyChats,
+        refetchGeneralChats,
+        refetchHistoryChats,
+        refetchUnreadCounts,
+    ]);
 
-    useModeratorChatSocket(
-        handleSocketMessage,
-        handleSocketChatClose,
-        handleSocketAssignmentChange
-    );
+    useChatSocket({
+        role: Role.Moderator,
+        onMessage: handleSocketMessage,
+        onChatClosed: handleSocketChatClose,
+        onAssignmentChange: handleSocketAssignmentChange,
+    });
 
     useEffect(() => {
         if (myChatsOffset === 0) setLocalMyChats(myChats);
@@ -357,7 +412,14 @@ const ModeratorChatPage: React.FC = () => {
         }
     }, [messages, messagesLoading]);
 
-    // Автоматичне прочитання і локальний скидання бейджу
+    useEffect(() => {
+        if (prevScrollHeightRef.current !== null && messagesContainerRef.current) {
+            const container = messagesContainerRef.current;
+            container.scrollTop = container.scrollHeight - (prevScrollHeightRef.current ?? 0);
+            prevScrollHeightRef.current = null;
+        }
+    }, [messages]);
+
     const markAsReadSentRef = useRef<number | null>(null);
 
     useEffect(() => {
@@ -373,7 +435,7 @@ const ModeratorChatPage: React.FC = () => {
                 .finally(() => {
                     refetchUnreadCounts();
                     setLocalMyChats(prev =>
-                        prev.map(c => c.chat_id === chatId ? { ...c, unread_messages_count: 0 } : c)
+                        prev.map(c => (c.chat_id === chatId ? { ...c, unread_messages_count: 0 } : c))
                     );
                 });
         }
@@ -382,11 +444,14 @@ const ModeratorChatPage: React.FC = () => {
         markAsReadSentRef.current = null;
     }, [chatId, selectedTab]);
 
-    const handleChatSelect = useCallback((selectedChat: ModeratorChatListItem) => {
-        if (chat?.chat_id === selectedChat.chat_id) return;
-        setChat(selectedChat);
-        scrollToBottomRef.current = true;
-    }, [chat?.chat_id]);
+    const handleChatSelect = useCallback(
+        (selectedChat: ModeratorChatListItem) => {
+            if (chat?.chat_id === selectedChat.chat_id) return;
+            setChat(selectedChat);
+            scrollToBottomRef.current = true;
+        },
+        [chat?.chat_id]
+    );
 
     const handleTabChange = useCallback((newTab: ChatTab) => {
         setSelectedTab(newTab);
@@ -408,7 +473,8 @@ const ModeratorChatPage: React.FC = () => {
                 setSelectedTab("my");
                 const currentChatId = chat.chat_id;
                 setTimeout(() => {
-                    const myChatEntry = localMyChats.find(c => c.chat_id === currentChatId) || updatedChatData;
+                    const myChatEntry =
+                        localMyChats.find(c => c.chat_id === currentChatId) || updatedChatData;
                     if (myChatEntry) {
                         setChat(myChatEntry);
                         scrollToBottomRef.current = true;
@@ -441,13 +507,12 @@ const ModeratorChatPage: React.FC = () => {
     useEffect(() => {
         const textarea = textareaRef.current;
         if (textarea) {
-            textarea.style.height = 'auto';
+            textarea.style.height = "auto";
             const newHeight = Math.min(textarea.scrollHeight, 100);
             textarea.style.height = `${Math.max(44, newHeight)}px`;
         }
     }, [messageInput]);
 
-    // handleCloseChat тепер викликається тільки після підтвердження!
     const handleCloseChat = async () => {
         if (!chat) return;
         setSending(true);
@@ -464,7 +529,7 @@ const ModeratorChatPage: React.FC = () => {
     };
 
     const handleSendMessage = async () => {
-        if (!chat || !messageInput.trim() || selectedTab === 'history') return;
+        if (!chat || !messageInput.trim() || selectedTab === "history") return;
         setSending(true);
         const messageText = messageInput.trim();
         try {
@@ -473,7 +538,7 @@ const ModeratorChatPage: React.FC = () => {
             setMessageInput("");
             scrollToBottomRef.current = true;
             if (textareaRef.current) {
-                textareaRef.current.style.height = '44px';
+                textareaRef.current.style.height = "44px";
             }
             await refetchMyChats();
             await refetchGeneralChats();
@@ -492,24 +557,48 @@ const ModeratorChatPage: React.FC = () => {
 
     const chatListRef = useRef<HTMLDivElement>(null);
 
-    // Infinite scroll: для поточної вкладки збільшуємо offset
-    const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
-        const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
-        if (scrollHeight - scrollTop - clientHeight < 50) {
-            if (selectedTab === "my" && !myChatsLoading && myChats.length > 0) {
-                setMyChatsOffset(myChatsOffset + LIMIT);
-            } else if (selectedTab === "general" && !generalChatsLoading && generalChats.length > 0) {
-                setGeneralChatsOffset(generalChatsOffset + LIMIT);
-            } else if (selectedTab === "history" && !historyChatsLoading && historyChats.length > 0) {
-                setHistoryChatsOffset(historyChatsOffset + LIMIT);
+    const handleScroll = useCallback(
+        (e: React.UIEvent<HTMLDivElement>) => {
+            const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
+            if (scrollHeight - scrollTop - clientHeight < 50) {
+                if (selectedTab === "my" && !myChatsLoading && myChats.length > 0) {
+                    setMyChatsOffset(myChatsOffset + LIMIT);
+                } else if (selectedTab === "general" && !generalChatsLoading && generalChats.length > 0) {
+                    setGeneralChatsOffset(generalChatsOffset + LIMIT);
+                } else if (selectedTab === "history" && !historyChatsLoading && historyChats.length > 0) {
+                    setHistoryChatsOffset(historyChatsOffset + LIMIT);
+                }
             }
+        },
+        [
+            selectedTab,
+            myChatsLoading,
+            myChatsOffset,
+            setMyChatsOffset,
+            myChats,
+            generalChatsLoading,
+            generalChatsOffset,
+            setGeneralChatsOffset,
+            generalChats,
+            historyChatsLoading,
+            historyChatsOffset,
+            setHistoryChatsOffset,
+            historyChats,
+        ]
+    );
+
+    const handleMessagesScroll = useCallback(() => {
+        if (
+            messagesContainerRef.current &&
+            messagesContainerRef.current.scrollTop < 50 &&
+            hasMore &&
+            !messagesLoading &&
+            chatId
+        ) {
+            prevScrollHeightRef.current = messagesContainerRef.current.scrollHeight;
+            loadMore();
         }
-    }, [
-        selectedTab,
-        myChatsLoading, myChatsOffset, setMyChatsOffset, myChats,
-        generalChatsLoading, generalChatsOffset, setGeneralChatsOffset, generalChats,
-        historyChatsLoading, historyChatsOffset, setHistoryChatsOffset, historyChats
-    ]);
+    }, [hasMore, messagesLoading, chatId, loadMore]);
 
     return (
         <div className="chats-main-container">
@@ -526,7 +615,7 @@ const ModeratorChatPage: React.FC = () => {
                                 placeholder="Пошук користувачів..."
                                 className="chats-search-input"
                                 value={searchValue}
-                                onChange={(e) => setSearchValue(e.target.value)}
+                                onChange={e => setSearchValue(e.target.value)}
                             />
                         </div>
                     </div>
@@ -549,38 +638,43 @@ const ModeratorChatPage: React.FC = () => {
                             </button>
                         ))}
                     </div>
-                    <div
-                        className="chats-list-scroll"
-                        ref={chatListRef}
-                        onScroll={handleScroll}
-                    >
+                    <div className="chats-list-scroll" ref={chatListRef} onScroll={handleScroll}>
                         {chatsLoading && chatsForCurrentTab.length === 0 ? (
                             <div className="chats-loading">Завантаження...</div>
                         ) : !Array.isArray(chatsForCurrentTab) || chatsForCurrentTab.length === 0 ? (
                             <div className="chats-empty-hint">Чатів не знайдено</div>
                         ) : (
                             <>
-                                {chatsForCurrentTab.map((c) => (
+                                {chatsForCurrentTab.map(c => (
                                     <div
                                         key={c.chat_id}
                                         className={`chats-list-item${chat?.chat_id === c.chat_id ? " selected" : ""}`}
                                         onClick={() => handleChatSelect(c)}
                                     >
                                         <Avatar
-                                            src={c.avatar ? import.meta.env.VITE_APP_API_BASE_URL + c.avatar : null}
+                                            src={
+                                                c.avatar
+                                                    ? import.meta.env.VITE_APP_API_BASE_URL + c.avatar
+                                                    : null
+                                            }
                                             alt={c.user_first_name + " " + c.user_last_name}
                                             size={44}
                                             name={c.user_first_name}
                                             surname={c.user_last_name}
                                         />
                                         <div className="chats-list-item-info">
-                                            <div className="chats-list-item-name">{c.user_first_name + " " + c.user_last_name}</div>
+                                            <div className="chats-list-item-name">
+                                                {c.user_first_name + " " + c.user_last_name}
+                                            </div>
                                             <div className="chats-list-item-message">{c.last_message}</div>
                                         </div>
                                         <div className="chats-list-item-meta">
                                             <div className="chats-list-item-time">
-                                                {c.last_message_sent_date && new Date(c.last_message_sent_date)
-                                                    .toLocaleTimeString("uk-UA", { hour: "2-digit", minute: "2-digit" })}
+                                                {c.last_message_sent_date &&
+                                                    new Date(c.last_message_sent_date).toLocaleTimeString(
+                                                        "uk-UA",
+                                                        { hour: "2-digit", minute: "2-digit" }
+                                                    )}
                                             </div>
                                             {selectedTab === "my" && c.unread_messages_count > 0 && (
                                                 <span className="chats-badge">{c.unread_messages_count}</span>
@@ -596,11 +690,11 @@ const ModeratorChatPage: React.FC = () => {
                     </div>
                 </div>
                 <div className="chats-content-area">
-                    {(!chat && !pendingChatId) ? (
+                    {!chat && !pendingChatId ? (
                         <div className="chats-select-placeholder">Оберіть чат</div>
                     ) : (
                         <div className="chats-chat-opened">
-                            {(pendingChatId && !chat) ? (
+                            {pendingChatId && !chat ? (
                                 <div className="chats-loading-container">
                                     <div className="chats-loading">Завантаження чату...</div>
                                 </div>
@@ -608,13 +702,19 @@ const ModeratorChatPage: React.FC = () => {
                                 <>
                                     <div className="chats-chat-header">
                                         <Avatar
-                                            src={chat?.avatar ? import.meta.env.VITE_APP_API_BASE_URL + chat.avatar : null}
+                                            src={
+                                                chat?.avatar
+                                                    ? import.meta.env.VITE_APP_API_BASE_URL + chat.avatar
+                                                    : null
+                                            }
                                             alt={chat?.user_first_name + " " + chat?.user_last_name}
                                             size={44}
                                             name={chat?.user_first_name}
                                             surname={chat?.user_last_name}
                                         />
-                                        <div className="chats-chat-header-name">{chat?.user_first_name + " " + chat?.user_last_name}</div>
+                                        <div className="chats-chat-header-name">
+                                            {chat?.user_first_name + " " + chat?.user_last_name}
+                                        </div>
                                         <div style={{ flex: 1 }} />
                                         {selectedTab === "my" && (
                                             <div className="chat-header-actions">
@@ -624,7 +724,11 @@ const ModeratorChatPage: React.FC = () => {
                                                     disabled={sending}
                                                     type="button"
                                                 >
-                                                    <img src={returnChatIcon} alt="" className="chat-header-icon icon-blue" />
+                                                    <img
+                                                        src={returnChatIcon}
+                                                        alt=""
+                                                        className="chat-header-icon icon-blue"
+                                                    />
                                                     <span>Повернути</span>
                                                 </button>
                                                 <button
@@ -633,7 +737,11 @@ const ModeratorChatPage: React.FC = () => {
                                                     type="button"
                                                     disabled={sending}
                                                 >
-                                                    <img src={closeChatIcon} alt="" className="chat-header-icon icon-red" />
+                                                    <img
+                                                        src={closeChatIcon}
+                                                        alt=""
+                                                        className="chat-header-icon icon-red"
+                                                    />
                                                     <span>Закрити</span>
                                                 </button>
                                             </div>
@@ -646,21 +754,35 @@ const ModeratorChatPage: React.FC = () => {
                                                     disabled={sending}
                                                     type="button"
                                                 >
-                                                    <img src={takeChatIcon} alt="" className="chat-header-icon icon-blue" />
+                                                    <img
+                                                        src={takeChatIcon}
+                                                        alt=""
+                                                        className="chat-header-icon icon-blue"
+                                                    />
                                                     <span>Взяти</span>
                                                 </button>
                                             </div>
                                         )}
                                     </div>
-                                    <div className="chats-chat-messages">
-                                        {messagesLoading ? (
+                                    <div
+                                        className="chats-chat-messages"
+                                        ref={messagesContainerRef}
+                                        onScroll={handleMessagesScroll}
+                                        style={{ overflowY: "auto", flex: 1 }}
+                                    >
+                                        {messagesLoading && messages.length === 0 ? (
                                             <div className="chats-loading">Завантаження...</div>
                                         ) : messagesError ? (
                                             <div className="chats-error">Помилка завантаження повідомлень</div>
                                         ) : (
                                             <>
                                                 {messages
-                                                    .sort((a, b) => new Date(a.sent_date).getTime() - new Date(b.sent_date).getTime())
+                                                    .slice()
+                                                    .sort(
+                                                        (a, b) =>
+                                                            new Date(a.sent_date).getTime() -
+                                                            new Date(b.sent_date).getTime()
+                                                    )
                                                     .map((msg, idx) => {
                                                         const msgDate = new Date(msg.sent_date);
                                                         const prevMsg = messages[idx - 1];
@@ -678,13 +800,29 @@ const ModeratorChatPage: React.FC = () => {
                                                                         {msgDate.toLocaleDateString("uk-UA")}
                                                                     </div>
                                                                 )}
-                                                                <div className={`chats-chat-message-row ${msg.is_written_by_moderator ? "moderator" : "user"}`}>
-                                                                    <div className={msg.is_written_by_moderator ? "chats-bubble-moderator" : "chats-bubble-user"}>
+                                                                <div
+                                                                    className={`chats-chat-message-row ${
+                                                                        msg.is_written_by_moderator ? "moderator" : "user"
+                                                                    }`}
+                                                                >
+                                                                    <div
+                                                                        className={
+                                                                            msg.is_written_by_moderator
+                                                                                ? "chats-bubble-moderator"
+                                                                                : "chats-bubble-user"
+                                                                        }
+                                                                    >
                                                                         {msg.text}
-                                                                        <div className={`chats-message-time${msg.is_written_by_moderator ? ' moderator' : ''}`}>
+                                                                        <div
+                                                                            className={`chats-message-time${
+                                                                                msg.is_written_by_moderator
+                                                                                    ? " moderator"
+                                                                                    : ""
+                                                                            }`}
+                                                                        >
                                                                             {msgDate.toLocaleTimeString("uk-UA", {
                                                                                 hour: "2-digit",
-                                                                                minute: "2-digit"
+                                                                                minute: "2-digit",
                                                                             })}
                                                                         </div>
                                                                     </div>
@@ -698,7 +836,7 @@ const ModeratorChatPage: React.FC = () => {
                                     </div>
                                     {selectedTab === "my" && (
                                         <form
-                                            onSubmit={(e) => {
+                                            onSubmit={e => {
                                                 e.preventDefault();
                                                 handleSendMessage();
                                             }}
@@ -712,6 +850,7 @@ const ModeratorChatPage: React.FC = () => {
                                                 className="chats-send-message-input"
                                                 disabled={sending}
                                                 rows={1}
+                                                maxLength={1000}
                                                 style={{ resize: "none", overflow: "hidden" }}
                                                 onKeyDown={e => {
                                                     if (e.key === "Enter" && !e.shiftKey) {
@@ -735,7 +874,6 @@ const ModeratorChatPage: React.FC = () => {
                     )}
                 </div>
             </div>
-
             <ConfirmationModal
                 open={closeChatModalOpen}
                 onClose={handleCloseChatModalCancel}
