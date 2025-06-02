@@ -1,0 +1,47 @@
+.admin-invite-modal {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+}
+
+.admin-invite-modal-title {
+    color: #5e7158;
+    font-size: 25px;
+    font-weight: 600;
+    margin-bottom: 16px;
+    text-align: center;
+    letter-spacing: -0.3px;
+}
+
+.admin-invite-modal-input {
+    margin-bottom: 16px;
+    font-size: 18px;
+    border-radius: 12px;
+    height: 48px;
+    padding-left: 16px;
+    padding-right: 16px;
+    width: 100%;
+}
+
+.admin-invite-submit-button {
+    width: 100%;
+    height: 48px;
+    background-color: #5E7158;
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    margin-top: 8px;
+}
+
+.admin-invite-submit-button:hover {
+    background-color: #4a5a46;
+}
+
+.admin-invite-submit-button:disabled {
+    background-color: #cccccc;
+    cursor: not-allowed;
+}
