@@ -1,0 +1,83 @@
+.invite-modal-close-btn {
+    position: absolute;
+    right: 18px;
+    top: 18px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 4px;
+    display: flex;
+}
+
+.invite-modal-title {
+    margin: 10px 0 10px 0;
+    font-size: 22px;
+    color: #50603a;
+    font-weight: 600;
+    text-align: center;
+}
+
+.invite-modal-desc {
+    color: #6a7285;
+    font-size: 17px;
+    text-align: center;
+    margin-bottom: 24px;
+}
+
+.invite-modal-link-block {
+    display: flex;
+    align-items: center;
+    background: #f5f7fa;
+    border-radius: 10px;
+    padding: 6px 8px 6px 14px;
+    width: 100%;
+    max-width: 320px;
+    margin: 0 auto;
+    box-sizing: border-box;
+}
+
+.invite-modal-link-input {
+    border: none;
+    background: transparent;
+    color: #62697d;
+    font-size: 19px;
+    width: 100%;
+    outline: none;
+    font-family: inherit;
+    padding: 0;
+}
+
+.invite-modal-copy-btn {
+    background: #657759;
+    border: none;
+    border-radius: 10px;
+    margin-left: 12px;
+    padding: 10px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    transition: background 0.2s;
+}
+.invite-modal-copy-btn:active {
+    background: #475a39;
+}
+.invite-modal-copy-icon {
+    width: 24px;
+    height: 24px;
+}
+
+.invite-modal-copied-text {
+    margin-top: 14px;
+    color: #608660;
+    font-size: 16px;
+    font-weight: 500;
+    text-align: center;
+    animation: fadeInOut 1.5s;
+}
+
+@keyframes fadeInOut {
+    0% { opacity: 0;}
+    12% { opacity: 1;}
+    88% { opacity: 1;}
+    100% { opacity: 0; }
+}

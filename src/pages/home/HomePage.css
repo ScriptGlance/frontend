@@ -1,0 +1,179 @@
+.home-page {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+    width: 100%;
+    overflow-x: hidden;
+    background-color: #eae9e3;
+}
+
+.header {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 40px;
+}
+
+.auth-buttons {
+    display: flex;
+    gap: 20px;
+}
+
+.intro-section {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    width: 100%;
+    padding: 40px 20px;
+    position: relative;
+    overflow: hidden;
+    box-sizing: border-box;
+}
+
+.text-block {
+    flex: 1 1 400px;
+    max-width: 600px;
+    z-index: 2;
+}
+
+.headline {
+    font-size: clamp(32px, 2.1vw, 48px);
+    font-weight: 700;
+    color: #000;
+    margin-bottom: 16px;
+}
+
+.subtext {
+    font-size: clamp(16px, 2.5vw, 20px);
+    font-weight: 400;
+    color: #333;
+    margin-bottom: 20px;
+}
+
+.apk-button {
+    height: 70px;
+    transition: transform 0.3s;
+    cursor: pointer;
+}
+
+.apk-button:hover {
+    transform: scale(1.07);
+}
+
+.hero-image-wrapper {
+    flex: 1 1 50%;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.background-image {
+    height: clamp(300px, 35vw, 600px);
+    object-fit: contain;
+}
+
+.features {
+    display: flex;
+    justify-content: space-evenly;
+    align-items: flex-start;
+    width: 100%;
+    max-width: 1200px;
+    box-sizing: border-box;
+}
+
+.feature {
+    display: flex;
+    align-items: flex-start;
+    max-width: 320px;
+}
+
+.feature-icon {
+    height: 50px;
+    margin-right: 16px;
+    flex-shrink: 0;
+}
+
+.feature-text h3 {
+    font-size: 20px;
+    font-weight: 600;
+    margin: 0;
+    line-height: 1.2;
+    text-align: left;
+}
+
+.feature-text p {
+    margin: 8px 0 0;
+    font-size: 16px;
+    color: #333;
+    text-align: left;
+}
+
+@media screen and (max-width: 1024px) {
+    .intro-section {
+        flex-direction: column;
+        text-align: center;
+        padding: 30px 20px;
+        align-items: center;
+    }
+
+    .hero-image-wrapper {
+        margin-top: 20px;
+    }
+
+    .background-image {
+        height: clamp(200px, 50vw, 400px);
+        transform: none;
+    }
+
+    .features {
+        flex-direction: column;
+        align-items: center;
+        padding: 40px 20px;
+        gap: 40px;
+    }
+
+    .feature {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+
+    .feature-icon {
+        margin: 0 0 12px;
+    }
+
+    .feature-text h3,
+    .feature-text p {
+        text-align: center;
+    }
+}
+
+@media screen and (max-width: 600px) {
+    .header {
+        flex-direction: column;
+        align-items: center;
+        padding: 18px 0 10px 0;
+        gap: 8px;
+        background: transparent;
+        box-shadow: none;
+    }
+
+    .auth-buttons {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+        width: 100%;
+        margin: 0;
+    }
+
+    .auth-buttons > * {
+        width: 90vw;
+        max-width: 340px;
+        min-width: 180px;
+        margin: 0 auto;
+        border-radius: 13px;
+        font-size: 1.11rem;
+    }
+}

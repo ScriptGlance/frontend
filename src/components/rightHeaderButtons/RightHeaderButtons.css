@@ -1,0 +1,23 @@
+.header-buttons {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 20px;
+    align-items: center;
+    margin-top: 15px;
+}
+
+.premium-btn {
+    color: white !important;
+    font-weight: 500 !important;
+    padding: 8px 20px !important;
+    border: none !important;
+}
+
+.header-buttons .avatar:hover {
+    filter: brightness(0.9);
+    cursor: pointer;
+}
+
+.header-buttons .avatar {
+    transition: filter 0.2s;
+}
