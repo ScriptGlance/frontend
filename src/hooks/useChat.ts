@@ -17,75 +17,95 @@ interface UseModeratorChatsProps {
     debounceMs?: number;
 }
 
-export function useModeratorChatMessages(chatId: number | null, params: GetUserChatMessagesParams) {
+export function useModeratorChatMessages(chatId: number | null, limit = 20) {
     const { getToken } = useAuth();
+
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [loading, setLoading] = useState(false);
+    const [loadingMore, setLoadingMore] = useState(false);
+    const [offset, setOffset] = useState(0);
+    const [hasMore, setHasMore] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const abortControllerRef = useRef<AbortController | null>(null);
-    const lastFetchTimeRef = useRef<number>(0);
-
-    const fetchData = useCallback(async () => {
-        if (!chatId) {
-            setMessages([]);
-            return;
-        }
-        const fetchForChatId = chatId;
-
-        if (abortControllerRef.current) {
-            abortControllerRef.current.abort();
-        }
-
-        const abortController = new AbortController();
-        abortControllerRef.current = abortController;
-        lastFetchTimeRef.current = Date.now();
-
-        try {
-            setLoading(true);
-            setError(null);
-            const token = getToken(Role.Moderator);
-            if (!token) {
-                throw new Error("Not authenticated");
-            }
-
-            const data = await ChatRepository.getModeratorChatMessages(token, chatId, params, abortController.signal);
-
-            if (!abortController.signal.aborted && chatId === fetchForChatId) {
-                setMessages(data || []);
-            }
-        } catch (e: any) {
-            if (!abortController.signal.aborted && chatId === fetchForChatId) {
-                setError(DEFAULT_ERROR_MESSAGE);
-                setMessages([]);
-            }
-        } finally {
-            if (!abortController.signal.aborted && chatId === fetchForChatId) {
-                setLoading(false);
-            }
-            if (abortControllerRef.current === abortController) {
-                abortControllerRef.current = null;
-            }
-        }
-    }, [getToken, chatId, params]);
-
-    const fetchDataRef = useRef(fetchData);
-    useEffect(() => {
-        fetchDataRef.current = fetchData;
-    }, [fetchData]);
 
     useEffect(() => {
-        fetchDataRef.current();
-        return () => {
-            if (abortControllerRef.current) {
-                abortControllerRef.current.abort();
-                abortControllerRef.current = null;
-            }
-        };
+        setMessages([]);
+        setOffset(0);
+        setHasMore(true);
+        setError(null);
     }, [chatId]);
 
-    const refetch = useCallback(() => fetchData(), [fetchData]);
+    useEffect(() => {
+        if (chatId) {
+            fetchMessages(0, false);
+        }
+        // eslint-disable-next-line
+    }, [chatId]);
 
-    return { messages, loading, error, refetch };
+    const fetchMessages = useCallback(
+        async (currentOffset = 0, append = false) => {
+            const token = getToken(Role.Moderator);
+            if (!token || !chatId) return;
+
+            if (currentOffset === 0) setLoading(true);
+            else setLoadingMore(true);
+
+            try {
+                setError(null);
+                const data = await ChatRepository.getModeratorChatMessages(token, chatId, {
+                    offset: currentOffset,
+                    limit,
+                });
+
+                if (data) {
+                    if (append) {
+                        setMessages(prev => [...data, ...prev]);
+                    } else {
+                        setMessages(data);
+                    }
+                    setHasMore(data.length === limit);
+                } else {
+                    if (!append) setMessages([]);
+                    setHasMore(false);
+                }
+            } catch {
+                setError("Не вдалося завантажити повідомлення");
+                if (!append) setMessages([]);
+            } finally {
+                setLoading(false);
+                setLoadingMore(false);
+            }
+        },
+        [getToken, chatId, limit]
+    );
+
+    const loadMore = useCallback(() => {
+        const nextOffset = offset + limit;
+        setOffset(nextOffset);
+        fetchMessages(nextOffset, true);
+    }, [offset, limit, fetchMessages]);
+
+    useEffect(() => {
+        if (offset > 0 && chatId) {
+            fetchMessages(offset, true);
+        }
+        // eslint-disable-next-line
+    }, [offset, chatId]);
+
+    const refetch = useCallback(() => {
+        setOffset(0);
+        fetchMessages(0, false);
+    }, [fetchMessages]);
+
+    return {
+        messages,
+        loading,
+        loadingMore,
+        hasMore,
+        error,
+        loadMore,
+        refetch,
+        setMessages,
+    };
 }
 
 export function useModeratorChats({
@@ -211,6 +231,87 @@ export function useModeratorUnreadCounts() {
     }, [fetchData]);
 
     return { generalChatsUnread, myChatsUnread, refetch: fetchData };
+}
+
+export function useUserChatMessages(params: GetUserChatMessagesParams) {
+    const { getToken } = useAuth();
+    const [messages, setMessages] = useState<ChatMessage[]>([]);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const abortControllerRef = useRef<AbortController | null>(null);
+
+    const fetchMessages = useCallback(async () => {
+        if (abortControllerRef.current) abortControllerRef.current.abort();
+        const abortController = new AbortController();
+        abortControllerRef.current = abortController;
+
+        try {
+            setLoading(true);
+            setError(null);
+            const token = getToken(Role.User);
+            if (!token) throw new Error("Not authenticated");
+
+            const data = await ChatRepository.getUserActiveChatMessages(token, params);
+            if (!abortController.signal.aborted) setMessages(data || []);
+        } catch (e: any) {
+            if (!abortControllerRef.current?.signal.aborted) {
+                setError(DEFAULT_ERROR_MESSAGE);
+                setMessages([]);
+            }
+        } finally {
+            if (!abortControllerRef.current?.signal.aborted) setLoading(false);
+            if (abortControllerRef.current === abortController) abortControllerRef.current = null;
+        }
+    }, [getToken, params]);
+
+    useEffect(() => {
+        fetchMessages();
+        return () => {
+            abortControllerRef.current?.abort();
+            abortControllerRef.current = null;
+        };
+    }, [fetchMessages]);
+
+    const sendMessage = useCallback(async (text: string) => {
+        const token = getToken(Role.User);
+        if (!token) throw new Error("Not authenticated");
+        const msg = await ChatRepository.sendUserActiveChatMessage(token, text);
+        setMessages((prev) => [...prev, msg]);
+        return msg;
+    }, [getToken]);
+
+    const markAsRead = useCallback(async () => {
+        const token = getToken(Role.User);
+        if (!token) throw new Error("Not authenticated");
+        await ChatRepository.markUserActiveChatAsRead(token);
+    }, [getToken]);
+
+    return { messages, loading, error, refetch: fetchMessages, sendMessage, markAsRead, setMessages };
+}
+
+export function useUserUnreadCount() {
+    const { getToken } = useAuth();
+    const [unread, setUnread] = useState(0);
+
+    const fetchUnread = useCallback(async () => {
+        try {
+            const token = getToken(Role.User);
+            if (!token) {
+                setUnread(0);
+                return;
+            }
+            const count = await ChatRepository.getUserActiveUnreadCount(token);
+            setUnread(count);
+        } catch {
+            setUnread(0);
+        }
+    }, [getToken]);
+
+    useEffect(() => {
+        fetchUnread();
+    }, [fetchUnread]);
+
+    return { unread, refetch: fetchUnread };
 }
 
 export function useModeratorChatActions() {
