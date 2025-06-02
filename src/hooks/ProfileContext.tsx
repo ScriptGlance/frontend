@@ -1,4 +1,3 @@
-// ProfileContext.tsx
 import React, {
     createContext,
     Dispatch,

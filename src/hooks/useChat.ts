@@ -110,12 +110,9 @@ export function useModeratorChats({
                                       debounceMs = 400,
                                   }: UseModeratorChatsProps) {
     const { getToken } = useAuth();
-
     const [search, setSearch] = useState(initialSearch);
     const [debouncedSearch, setDebouncedSearch] = useState(initialSearch);
-
     const [currentOffset, setCurrentOffset] = useState(offset);
-
     const [chats, setChats] = useState<ModeratorChatListItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -127,6 +124,11 @@ export function useModeratorChats({
         }, debounceMs);
         return () => clearTimeout(handler);
     }, [search, debounceMs]);
+
+    useEffect(() => {
+        setCurrentOffset(0);
+        setChats([]);
+    }, [debouncedSearch, type]);
 
     const abortControllerRef = useRef<AbortController | null>(null);
 
@@ -141,9 +143,7 @@ export function useModeratorChats({
             setError(null);
 
             const token = getToken(Role.Moderator);
-            if (!token) {
-                throw new Error("Not authenticated");
-            }
+            if (!token) throw new Error("Not authenticated");
 
             const params: GetModeratorChatsParams = {
                 type,
@@ -155,7 +155,11 @@ export function useModeratorChats({
             const data = await ChatRepository.getModeratorChats(token, params, abortController.signal);
 
             if (!abortController.signal.aborted) {
-                setChats(data || []);
+                if (currentOffset === 0) {
+                    setChats(data || []);
+                } else {
+                    setChats(prev => [...prev, ...(data || [])]);
+                }
             }
         } catch (e: any) {
             if (!abortController.signal.aborted && e.name !== "AbortError") {
@@ -181,7 +185,11 @@ export function useModeratorChats({
     const setPage = (page: number) => setCurrentOffset(page * limit);
     const resetSearch = () => setSearch("");
 
-    const refetch = fetchData;
+    const refetch = useCallback(() => {
+        setCurrentOffset(0);
+        setChats([]);
+        fetchData();
+    }, [fetchData]);
 
     return {
         chats,
