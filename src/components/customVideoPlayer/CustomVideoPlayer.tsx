@@ -339,8 +339,7 @@ const CustomVideoPlayer: React.FC<CustomVideoPlayerProps> = ({
             )
             }
         </div>
-    )
-        ;
+    );
 };
 
 export default CustomVideoPlayer;
