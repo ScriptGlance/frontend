@@ -1,4 +1,5 @@
 import apiClient from '../axiosClient';
+import axios from "axios";
 
 export interface User {
     avatar: string | null;
@@ -69,6 +70,12 @@ export interface DailyStats {
 
 export interface MonthlyStats {
     period_start: string;
+    total_users_count: number;
+    total_presentation_duration_seconds: number;
+    videos_recorded_count: number;
+}
+
+export interface TotalStats {
     total_users_count: number;
     total_presentation_duration_seconds: number;
     videos_recorded_count: number;
@@ -160,17 +167,31 @@ class AdminRepository {
     }
 
     public async inviteUser(token: string, data: InviteUserRequest): Promise<void> {
-        const res = await apiClient.post('/admin/user/invite', data, {
-            headers: { Authorization: `Bearer ${token}` },
-        });
-        if (res.error) throw new Error(res.description || "Failed to invite user");
+        try {
+            const res = await apiClient.post('/admin/user/invite', data, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            if (res.error) throw new Error(res.description || "Failed to invite user");
+        } catch (error) {
+            if (axios.isAxiosError(error)) {
+                throw error;
+            }
+            throw new Error("Failed to invite user");
+        }
     }
 
     public async inviteModerator(token: string, data: InviteModeratorRequest): Promise<void> {
-        const res = await apiClient.post('/admin/moderator/invite', data, {
-            headers: { Authorization: `Bearer ${token}` },
-        });
-        if (res.error) throw new Error(res.description || "Failed to invite moderator");
+        try {
+            const res = await apiClient.post('/admin/moderator/invite', data, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            if (res.error) throw new Error(res.description || "Failed to invite moderator");
+        } catch (error) {
+            if (axios.isAxiosError(error)) {
+                throw error;
+            }
+            throw new Error("Failed to invite moderator");
+        }
     }
 
     public async getDailyStats(token: string, params: GetStatsParams = {}): Promise<DailyStats[]> {
@@ -188,6 +209,14 @@ class AdminRepository {
             params,
         });
         if (res.error) throw new Error(res.description || "Failed to load monthly stats");
+        return res.data;
+    }
+
+    public async getTotalStats(token: string): Promise<TotalStats> {
+        const res = await apiClient.get("/admin/stats/total", {
+            headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.error) throw new Error(res.description || "Failed to load total stats");
         return res.data;
     }
 }

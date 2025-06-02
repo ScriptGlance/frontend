@@ -10,6 +10,7 @@ import adminRepository, {
     UpdateModeratorProfileRequest,
     DailyStats,
     MonthlyStats,
+    TotalStats,
     GetStatsParams
 } from "../api/repositories/adminRepository";
 import { useAuth } from "./useAuth";
@@ -128,10 +129,42 @@ export function useAdminMonthlyStats(params: GetStatsParams = {}) {
     return { monthlyStats, loading, error, refetch: fetchData };
 }
 
+export function useAdminTotalStats() {
+    const { getToken } = useAuth();
+    const [totalStats, setTotalStats] = useState<TotalStats | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    const fetchData = useCallback(async () => {
+        try {
+            setLoading(true); setError(null);
+            const token = getToken(Role.Admin);
+            if (!token) throw new Error("Not authenticated");
+            const data = await adminRepository.getTotalStats(token);
+            setTotalStats(data);
+        } catch (e: any) {
+            if (e.name === "CanceledError" || e.name === "AbortError") return;
+            setError(DEFAULT_ERROR_MESSAGE);
+        } finally { setLoading(false); }
+    }, [getToken]);
+
+    useEffect(() => {
+        const controller = new AbortController();
+        fetchData();
+        return () => controller.abort();
+    }, [fetchData]);
+
+    return { totalStats, loading, error, refetch: fetchData };
+}
+
 export function useAdminUserActions() {
     const { getToken } = useAuth();
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+
+    const resetError = useCallback(() => {
+        setError(null);
+    }, []);
 
     const updateUserProfile = useCallback(async (userId: number, data: UpdateUserProfileRequest): Promise<User | null> => {
         try {
@@ -163,7 +196,8 @@ export function useAdminUserActions() {
 
     const inviteUser = useCallback(async (data: InviteUserRequest): Promise<boolean> => {
         try {
-            setLoading(true); setError(null);
+            setLoading(true);
+            setError(null);
             const token = getToken(Role.Admin);
             if (!token) throw new Error("Not authenticated");
             await adminRepository.inviteUser(token, data);
@@ -171,17 +205,27 @@ export function useAdminUserActions() {
         } catch (e: any) {
             if (e.name === "CanceledError" || e.name === "AbortError") return false;
             setError(DEFAULT_ERROR_MESSAGE);
-            return false;
-        } finally { setLoading(false); }
+
+            if (e.response && e.response.status) {
+                throw { ...e, status: e.response.status };
+            }
+            throw e;
+        } finally {
+            setLoading(false);
+        }
     }, [getToken]);
 
-    return { updateUserProfile, deleteUser, inviteUser, loading, error };
+    return { updateUserProfile, deleteUser, inviteUser, loading, error, resetError };
 }
 
 export function useAdminModeratorActions() {
     const { getToken } = useAuth();
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+
+    const resetError = useCallback(() => {
+        setError(null);
+    }, []);
 
     const updateModeratorProfile = useCallback(async (moderatorId: number, data: UpdateModeratorProfileRequest): Promise<Moderator | null> => {
         try {
@@ -213,7 +257,8 @@ export function useAdminModeratorActions() {
 
     const inviteModerator = useCallback(async (data: InviteModeratorRequest): Promise<boolean> => {
         try {
-            setLoading(true); setError(null);
+            setLoading(true);
+            setError(null);
             const token = getToken(Role.Admin);
             if (!token) throw new Error("Not authenticated");
             await adminRepository.inviteModerator(token, data);
@@ -221,9 +266,15 @@ export function useAdminModeratorActions() {
         } catch (e: any) {
             if (e.name === "CanceledError" || e.name === "AbortError") return false;
             setError(DEFAULT_ERROR_MESSAGE);
-            return false;
-        } finally { setLoading(false); }
+
+            if (e.response && e.response.status) {
+                throw { ...e, status: e.response.status };
+            }
+            throw e;
+        } finally {
+            setLoading(false);
+        }
     }, [getToken]);
 
-    return { updateModeratorProfile, deleteModerator, inviteModerator, loading, error };
+    return { updateModeratorProfile, deleteModerator, inviteModerator, loading, error, resetError };
 }

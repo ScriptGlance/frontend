@@ -1,31 +1,59 @@
-import React, { useState, useMemo, useEffect, useRef, useCallback } from "react";
+import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import "./AdminDashboardPage.css";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth.ts";
-import { useProfile } from "../../hooks/ProfileContext.tsx";
 import { Avatar } from "../../components/avatar/Avatar.tsx";
 import searchIcon from "../../assets/search.svg";
 import ErrorModal from "../../components/modals/error/ErrorModal.tsx";
 import editIcon from "../../assets/edit-icon.svg";
 import deleteIcon from "../../assets/delete-icon.svg";
 import logoutIcon from "../../assets/logout.svg";
-import { useAdminUserActions, useAdminUsers, useAdminModerators, useAdminModeratorActions } from "../../hooks/useAdminData.ts";
+import userIcon from "../../assets/user-icon.svg";
+import whiteTimeIcon from "../../assets/white-time-icon.svg";
+import videoIcon from "../../assets/video-icon.svg";
+import {
+    useAdminUserActions,
+    useAdminUsers,
+    useAdminModerators,
+    useAdminModeratorActions,
+    useAdminDailyStats, useAdminMonthlyStats, useAdminTotalStats
+} from "../../hooks/useAdminData.ts";
 import ConfirmationModal from "../../components/modals/deleteConfirmation/DeleteConfirmationModal.tsx";
 import UpdateProfileModal from "../../components/modals/updateProfile/UpdateProfileModal.tsx";
 import Logo from "../../components/logo/Logo.tsx";
 import { Role } from "../../types/role.ts";
-import { useAdminDailyStats, useAdminMonthlyStats } from "../../hooks/useAdminData.ts";
 import Chart from 'chart.js/auto';
 import { ChartOptions, TooltipItem } from "chart.js";
+import {UpdateModeratorProfileRequest, UpdateUserProfileRequest} from "../../api/repositories/adminRepository.ts";
+import AdminInvite from "../../components/modals/adminInvite/AdminInvite.tsx";
+
+const ITEMS_PER_PAGE = 20;
 
 export const AdminDashboardPage = () => {
+    const [selectedTab, setSelectedTab] = useState<"users" | "moderators" | "statistics">("users");
+
     const [search, setSearch] = useState("");
     const [userSort, setUserSort] = useState<"registeredAt" | "name">("registeredAt");
     const [userOrder, setUserOrder] = useState<"asc" | "desc">("desc");
     const [modSort, setModSort] = useState<"joinedAt" | "name">("joinedAt");
     const [modOrder, setModOrder] = useState<"asc" | "desc">("desc");
-    const [selectedTab, setSelectedTab] = useState<"users" | "moderators" | "statistics">("users");
+
+    const [userOffset, setUserOffset] = useState(0);
+    const [modOffset, setModOffset] = useState(0);
+
+    const [allUsers, setAllUsers] = useState<any[]>([]);
+    const [allModerators, setAllModerators] = useState<any[]>([]);
+    const [hasMoreUsers, setHasMoreUsers] = useState(true);
+    const [hasMoreModerators, setHasMoreModerators] = useState(true);
+    const [loadingMoreUsers, setLoadingMoreUsers] = useState(false);
+    const [loadingMoreModerators, setLoadingMoreModerators] = useState(false);
+
+    const [showUserEditModal, setShowUserEditModal] = useState(false);
+    const [showModeratorEditModal, setShowModeratorEditModal] = useState(false);
+    const [selectedUser, setSelectedUser] = useState<any>(null);
+    const [selectedModerator, setSelectedModerator] = useState<any>(null);
     const [showErrorModal, setShowErrorModal] = useState(false);
+    const [errorMessage, setErrorMessage] = useState("");
     const [showConfirmModal, setShowConfirmModal] = useState(false);
     const [itemToDelete, setItemToDelete] = useState<{
         id: number,
@@ -33,29 +61,14 @@ export const AdminDashboardPage = () => {
         firstName: string,
         lastName: string
     } | null>(null);
+
+    const [showUserInviteModal, setShowUserInviteModal] = useState(false);
+    const [showModeratorInviteModal, setShowModeratorInviteModal] = useState(false);
+    const [inviteLoading, setInviteLoading] = useState(false);
+    const [userInviteKey, setUserInviteKey] = useState(0);
+    const [moderatorInviteKey, setModeratorInviteKey] = useState(0);
+
     const [statsTimeRange, setStatsTimeRange] = useState<"days" | "months">("days");
-
-    const [showUserEditModal, setShowUserEditModal] = useState(false);
-    const [showModeratorEditModal, setShowModeratorEditModal] = useState(false);
-    const [selectedUser, setSelectedUser] = useState<any>(null);
-    const [selectedModerator, setSelectedModerator] = useState<any>(null);
-
-    // Pagination state
-    const [userOffset, setUserOffset] = useState(0);
-    const [modOffset, setModOffset] = useState(0);
-    const [hasMoreUsers, setHasMoreUsers] = useState(true);
-    const [hasMoreModerators, setHasMoreModerators] = useState(true);
-    const [loadingMore, setLoadingMore] = useState(false);
-    const [initialLoad, setInitialLoad] = useState(true);
-
-    // Refs for infinite scrolling
-    const userListRef = useRef<HTMLDivElement>(null);
-    const modListRef = useRef<HTMLDivElement>(null);
-    const userObserverRef = useRef<IntersectionObserver | null>(null);
-    const modObserverRef = useRef<IntersectionObserver | null>(null);
-    const userLoaderRef = useRef<HTMLDivElement>(null);
-    const modLoaderRef = useRef<HTMLDivElement>(null);
-
     const activityChartRef = useRef<HTMLCanvasElement>(null);
     const usersChartRef = useRef<HTMLCanvasElement>(null);
     const videosChartRef = useRef<HTMLCanvasElement>(null);
@@ -63,11 +76,17 @@ export const AdminDashboardPage = () => {
     const usersChartInstance = useRef<Chart | null>(null);
     const videosChartInstance = useRef<Chart | null>(null);
 
+    const userListRef = useRef<HTMLDivElement>(null);
+    const modListRef = useRef<HTMLDivElement>(null);
+    const userLoaderRef = useRef<HTMLDivElement>(null);
+    const modLoaderRef = useRef<HTMLDivElement>(null);
+    const userObserverRef = useRef<IntersectionObserver | null>(null);
+    const modObserverRef = useRef<IntersectionObserver | null>(null);
+
     const navigate = useNavigate();
     const { logout } = useAuth();
-    const { profile: currentAdmin } = useProfile();
-
-    const ITEMS_PER_PAGE = 20;
+    const { deleteUser, updateUserProfile, inviteUser, error: userActionError, loading: userActionLoading, resetError: resetUserActionError } = useAdminUserActions();
+    const { deleteModerator, updateModeratorProfile, inviteModerator, error: modActionError, loading: modActionLoading, resetError: resetModActionError } = useAdminModeratorActions();
 
     const userQueryParams = useMemo(() => ({
         search: search || undefined,
@@ -76,6 +95,7 @@ export const AdminDashboardPage = () => {
         limit: ITEMS_PER_PAGE,
         offset: userOffset
     }), [search, userSort, userOrder, userOffset]);
+    const { users, loading: usersLoading, error: usersError, refetch: refetchUsers } = useAdminUsers(userQueryParams);
 
     const modQueryParams = useMemo(() => ({
         search: search || undefined,
@@ -84,165 +104,89 @@ export const AdminDashboardPage = () => {
         limit: ITEMS_PER_PAGE,
         offset: modOffset
     }), [search, modSort, modOrder, modOffset]);
-
-    const statsParams = useMemo(() => ({
-        limit: 30,
-        offset: 0,
-    }), []);
-
-    const { users, loading: usersLoading, error: usersError, refetch: refetchUsers } = useAdminUsers(userQueryParams);
     const { moderators, loading: moderatorsLoading, error: moderatorsError, refetch: refetchModerators } = useAdminModerators(modQueryParams);
+
+    const statsParams = useMemo(() => ({ limit: 30, offset: 0 }), []);
     const { dailyStats, loading: dailyStatsLoading, error: dailyStatsError } = useAdminDailyStats(statsParams);
     const { monthlyStats, loading: monthlyStatsLoading, error: monthlyStatsError } = useAdminMonthlyStats(statsParams);
-    const { deleteUser, updateUserProfile, error: userActionError, loading: userActionLoading } = useAdminUserActions();
-    const { deleteModerator, updateModeratorProfile, error: modActionError, loading: modActionLoading } = useAdminModeratorActions();
+    const { totalStats, loading: totalStatsLoading, error: totalStatsError } = useAdminTotalStats();
 
-    // State to store all loaded users/moderators for infinite scrolling
-    const [allUsers, setAllUsers] = useState<any[]>([]);
-    const [allModerators, setAllModerators] = useState<any[]>([]);
-
-    // Reset states when changing tabs
     useEffect(() => {
-        if (selectedTab === "users") {
-            // Make sure we refresh observers when changing to users tab
-            setTimeout(() => {
-                setupUserObserver();
-            }, 100);
-        } else if (selectedTab === "moderators") {
-            // Make sure we refresh observers when changing to moderators tab
-            setTimeout(() => {
-                setupModObserver();
-            }, 100);
-        }
-    }, [selectedTab]);
-
-    // Update all users when new users are loaded
-    useEffect(() => {
-        if (usersLoading) return;
-
+        console.log("[users] useEffect: userOffset:", userOffset, "users:", users, "usersLoading:", usersLoading);
         if (userOffset === 0) {
             setAllUsers(users);
+            console.log("[users] setAllUsers (reset):", users);
         } else if (users.length > 0) {
-            setAllUsers(prev => [...prev, ...users]);
+            setAllUsers(prev => [
+                ...prev,
+                ...users.filter(newUser => !prev.some(u => u.user_id === newUser.user_id))
+            ]);
+            console.log("[users] setAllUsers (append):", users);
         }
-
-        // Check if there might be more users
         setHasMoreUsers(users.length === ITEMS_PER_PAGE);
-        setLoadingMore(false);
-
-        // After initial data is loaded, setup observer
-        if (initialLoad && selectedTab === "users") {
-            setInitialLoad(false);
-            setTimeout(() => {
-                setupUserObserver();
-            }, 100);
-        }
+        setLoadingMoreUsers(false);
+        setTimeout(setupUserObserver, 100);
     }, [users, usersLoading, userOffset]);
 
-    // Update all moderators when new moderators are loaded
     useEffect(() => {
-        if (moderatorsLoading) return;
-
-        if (modOffset === 0) {
-            setAllModerators(moderators);
-        } else if (moderators.length > 0) {
-            setAllModerators(prev => [...prev, ...moderators]);
-        }
-
-        // Check if there might be more moderators
-        setHasMoreModerators(moderators.length === ITEMS_PER_PAGE);
-        setLoadingMore(false);
-
-        // After initial data is loaded, setup observer
-        if (initialLoad && selectedTab === "moderators") {
-            setInitialLoad(false);
-            setTimeout(() => {
-                setupModObserver();
-            }, 100);
-        }
-    }, [moderators, moderatorsLoading, modOffset]);
-
-    // Reset offsets when search or sort changes
-    useEffect(() => {
+        console.log("[users] Sorting/Search changed. Resetting offset and clearing users.");
         setUserOffset(0);
         setAllUsers([]);
-        setInitialLoad(true);
+        setHasMoreUsers(true);
     }, [search, userSort, userOrder]);
+
+    useEffect(() => {
+        if (modOffset === 0) setAllModerators(moderators);
+        else if (moderators.length > 0) {
+            setAllModerators(prev => [
+                ...prev,
+                ...moderators.filter(newMod => !prev.some(m => m.moderator_id === newMod.moderator_id))
+            ]);
+        }
+        setHasMoreModerators(moderators.length === ITEMS_PER_PAGE);
+        setLoadingMoreModerators(false);
+        setTimeout(setupModObserver, 100);
+    }, [moderators, moderatorsLoading, modOffset]);
 
     useEffect(() => {
         setModOffset(0);
         setAllModerators([]);
-        setInitialLoad(true);
     }, [search, modSort, modOrder]);
 
-    // Setup intersection observer for infinite scrolling
     const setupUserObserver = useCallback(() => {
-        if (userObserverRef.current) {
-            userObserverRef.current.disconnect();
-        }
-
-        const options = {
-            root: null,
-            rootMargin: '0px',
-            threshold: 0.1
-        };
+        if (userObserverRef.current) userObserverRef.current.disconnect();
+        if (!userLoaderRef.current) return;
 
         userObserverRef.current = new IntersectionObserver((entries) => {
-            if (entries[0]?.isIntersecting) {
-                if (hasMoreUsers && !usersLoading && !loadingMore) {
-                    console.log("Loading more users...");
-                    setLoadingMore(true);
-                    setUserOffset(prev => prev + ITEMS_PER_PAGE);
-                }
+            console.log("[userObserver] entries:", entries, "hasMoreUsers:", hasMoreUsers, "usersLoading:", usersLoading, "loadingMoreUsers:", loadingMoreUsers);
+            if (entries[0]?.isIntersecting && hasMoreUsers && !usersLoading && !loadingMoreUsers) {
+                setLoadingMoreUsers(true);
+                setUserOffset(prev => prev + ITEMS_PER_PAGE);
+                console.log("[userObserver] Triggered loading more users. New offset:", userOffset + ITEMS_PER_PAGE);
             }
-        }, options);
+        }, { root: null, rootMargin: '0px', threshold: 0.1 });
 
-        if (userLoaderRef.current) {
-            userObserverRef.current.observe(userLoaderRef.current);
-            console.log("User observer set up");
-        } else {
-            console.log("User loader ref not available");
-        }
-    }, [hasMoreUsers, usersLoading, loadingMore]);
+        userObserverRef.current.observe(userLoaderRef.current);
+    }, [hasMoreUsers, usersLoading, loadingMoreUsers, userOffset]);
 
     const setupModObserver = useCallback(() => {
-        if (modObserverRef.current) {
-            modObserverRef.current.disconnect();
-        }
-
-        const options = {
-            root: null,
-            rootMargin: '0px',
-            threshold: 0.1
-        };
+        if (modObserverRef.current) modObserverRef.current.disconnect();
+        if (!modLoaderRef.current) return;
 
         modObserverRef.current = new IntersectionObserver((entries) => {
-            if (entries[0]?.isIntersecting) {
-                if (hasMoreModerators && !moderatorsLoading && !loadingMore) {
-                    console.log("Loading more moderators...");
-                    setLoadingMore(true);
-                    setModOffset(prev => prev + ITEMS_PER_PAGE);
-                }
+            if (entries[0]?.isIntersecting && hasMoreModerators && !moderatorsLoading && !loadingMoreModerators) {
+                setLoadingMoreModerators(true);
+                setModOffset(prev => prev + ITEMS_PER_PAGE);
             }
-        }, options);
+        }, { root: null, rootMargin: '0px', threshold: 0.1 });
 
-        if (modLoaderRef.current) {
-            modObserverRef.current.observe(modLoaderRef.current);
-            console.log("Moderator observer set up");
-        } else {
-            console.log("Moderator loader ref not available");
-        }
-    }, [hasMoreModerators, moderatorsLoading, loadingMore]);
+        modObserverRef.current.observe(modLoaderRef.current);
+    }, [hasMoreModerators, moderatorsLoading, loadingMoreModerators]);
 
-    // Cleanup observers when component unmounts
     useEffect(() => {
         return () => {
-            if (userObserverRef.current) {
-                userObserverRef.current.disconnect();
-            }
-            if (modObserverRef.current) {
-                modObserverRef.current.disconnect();
-            }
+            if (userObserverRef.current) userObserverRef.current.disconnect();
+            if (modObserverRef.current) modObserverRef.current.disconnect();
         };
     }, []);
 
@@ -269,28 +213,81 @@ export const AdminDashboardPage = () => {
 
     const handleUpdateUser = async (fields: { first_name: string; last_name: string; avatar?: File | null }) => {
         if (selectedUser) {
-            try {
-                const processedFields = { ...fields, avatar: fields.avatar === null ? undefined : fields.avatar };
-                await updateUserProfile(selectedUser.user_id, processedFields);
-                refetchUsers();
-                setShowUserEditModal(false);
-            } catch (error) {
-                setShowErrorModal(true);
+            const payload: UpdateUserProfileRequest = {
+                first_name: fields.first_name,
+                last_name: fields.last_name,
+                ...(fields.avatar !== null ? { avatar: fields.avatar } : {})
+            };
+            const updated = await updateUserProfile(selectedUser.user_id, payload);
+            setShowUserEditModal(false);
+            setSelectedUser(null);
+            if (updated) {
+                setAllUsers(prev => prev.map(u => u.user_id === updated.user_id ? { ...u, ...updated } : u));
             }
         }
     };
 
     const handleUpdateModerator = async (fields: { first_name: string; last_name: string; avatar?: File | null }) => {
         if (selectedModerator) {
-            try {
-                const processedFields = { ...fields, avatar: fields.avatar === null ? undefined : fields.avatar };
-                await updateModeratorProfile(selectedModerator.moderator_id, processedFields);
-                refetchModerators();
-                setShowModeratorEditModal(false);
-            } catch (error) {
-                setShowErrorModal(true);
+            const payload: UpdateModeratorProfileRequest = {
+                first_name: fields.first_name,
+                last_name: fields.last_name,
+                ...(fields.avatar !== null ? { avatar: fields.avatar } : {})
+            };
+            const updated = await updateModeratorProfile(selectedModerator.moderator_id, payload);
+            setShowModeratorEditModal(false);
+            setSelectedModerator(null);
+            if (updated) {
+                setAllModerators(prev => prev.map(m => m.moderator_id === updated.moderator_id ? { ...m, ...updated } : m));
             }
         }
+    };
+
+    const handleSendUserInvite = async (data: { first_name: string; last_name: string; email: string }) => {
+        setInviteLoading(true);
+        try {
+            await inviteUser(data);
+            setShowUserInviteModal(false);
+            refetchUsers();
+        } catch (error: any) {
+            setShowUserInviteModal(false);
+
+            if (error.status === 409) {
+                setErrorMessage("Користувач з такою адресою електронної пошти вже зареєстрований");
+            } else {
+                setErrorMessage("Помилка при надсиланні запрошення");
+            }
+            setShowErrorModal(true);
+        } finally {
+            setInviteLoading(false);
+        }
+    };
+
+    const handleSendModeratorInvite = async (data: { first_name: string; last_name: string; email: string }) => {
+        setInviteLoading(true);
+        try {
+            await inviteModerator(data);
+            setShowModeratorInviteModal(false);
+            refetchModerators();
+        } catch (error: any) {
+            setShowModeratorInviteModal(false);
+
+            if (error.status === 409) {
+                setErrorMessage("Користувач з такою адресою електронної пошти вже зареєстрований");
+            } else {
+                setErrorMessage("Помилка при надсиланні запрошення");
+            }
+            setShowErrorModal(true);
+        } finally {
+            setInviteLoading(false);
+        }
+    };
+
+    const clearAllErrors = () => {
+        setShowErrorModal(false);
+        setErrorMessage("");
+        resetUserActionError();
+        resetModActionError();
     };
 
     const handleDeleteItem = (id: number, type: "user" | "moderator") => {
@@ -306,7 +303,7 @@ export const AdminDashboardPage = () => {
 
     const confirmDelete = async () => {
         if (!itemToDelete) return;
-        let success = false;
+        let success;
         if (itemToDelete.type === "user") {
             success = await deleteUser(itemToDelete.id);
             if (success) {
@@ -327,17 +324,42 @@ export const AdminDashboardPage = () => {
     };
 
     const handleAdd = () => {
-        if (selectedTab === "users") navigate("/admin/user/add");
-        else if (selectedTab === "moderators") navigate("/admin/moderator/add");
+        if (selectedTab === "users") {
+            setUserInviteKey(prev => prev + 1);
+            setShowUserInviteModal(true);
+        } else if (selectedTab === "moderators") {
+            setModeratorInviteKey(prev => prev + 1);
+            setShowModeratorInviteModal(true);
+        }
     };
 
-    const setSortByUserRegisteredAt = () => { setUserSort("registeredAt"); setUserOrder("desc"); };
-    const setSortByUserName = () => { setUserSort("name"); setUserOrder("asc"); };
-    const setSortByModJoinedAt = () => { setModSort("joinedAt"); setModOrder("desc"); };
-    const setSortByModName = () => { setModSort("name"); setModOrder("asc"); };
+    const setSortByUserRegisteredAt = () => {
+        setUserSort("registeredAt");
+        setUserOrder("desc");
+    };
 
-    const getErrorMessage = () => usersError || moderatorsError || userActionError || modActionError || dailyStatsError || monthlyStatsError || "";
-    const isLoading = selectedTab === "users" ? usersLoading && userOffset === 0 : (selectedTab === "moderators" ? moderatorsLoading && modOffset === 0 : (dailyStatsLoading || monthlyStatsLoading));
+    const setSortByUserName = () => {
+        setUserSort("name");
+        setUserOrder("asc");
+    };
+
+    const setSortByModJoinedAt = () => {
+        setModSort("joinedAt");
+        setModOrder("desc");
+    };
+
+    const setSortByModName = () => {
+        setModSort("name");
+        setModOrder("asc");
+    };
+
+    const getErrorMessage = () => errorMessage || usersError || moderatorsError || userActionError || modActionError || dailyStatsError || monthlyStatsError || totalStatsError || "";
+    const isLoading =
+        selectedTab === "users"
+            ? usersLoading && userOffset === 0
+            : selectedTab === "moderators"
+                ? moderatorsLoading && modOffset === 0
+                : (dailyStatsLoading || monthlyStatsLoading || totalStatsLoading);
     const hasError = !!(getErrorMessage());
 
     useEffect(() => {
@@ -378,36 +400,17 @@ export const AdminDashboardPage = () => {
         responsive: true,
         maintainAspectRatio: false,
         scales: {
-            y: {
-                beginAtZero: true,
-                grid: { color: 'rgba(0, 0, 0, 0.08)' },
-                ticks: { color: '#666', font: { size: 10 } },
-            },
-            x: {
-                grid: { display: false },
-                ticks: { color: '#666', font: { size: 10 }, maxRotation: 0, minRotation: 0 },
-            }
+            y: { beginAtZero: true, grid: { color: 'rgba(0, 0, 0, 0.08)' }, ticks: { color: '#666', font: { size: 10 } }, },
+            x: { grid: { display: false }, ticks: { color: '#666', font: { size: 10 }, maxRotation: 0, minRotation: 0 }, }
         },
         plugins: {
-            legend: {
-                display: true,
-                position: 'top',
-                align: 'end',
-                labels: {
-                    boxWidth: 12,
-                    usePointStyle: true,
-                    pointStyle: 'rect',
-                    padding: 20,
-                    color: '#333',
-                    font: { size: 12 }
-                }
-            },
+            legend: { display: true, position: 'top', align: 'start', labels: { boxWidth: 12, usePointStyle: true, pointStyle: 'rect', padding: 20, color: '#333', font: { size: 12 } } },
             tooltip: {
                 backgroundColor: 'rgba(0,0,0,0.7)',
                 titleFont: { size: 13 },
                 bodyFont: { size: 12 },
                 callbacks: {
-                    label: function(context: TooltipItem<any>) {
+                    label: function (context: TooltipItem<any>) {
                         let label = context.dataset.label || '';
                         if (label) label += ': ';
                         if (context.parsed.y !== null) label += context.parsed.y;
@@ -490,12 +493,18 @@ export const AdminDashboardPage = () => {
     };
 
     const getStatsSummary = () => {
+        if (totalStats) {
+            return {
+                totalUsers: totalStats.total_users_count,
+                totalDuration: Math.round(totalStats.total_presentation_duration_seconds / 60),
+                totalVideos: totalStats.videos_recorded_count
+            };
+        }
         if (!monthlyStats?.length && !dailyStats?.length) {
             return { totalUsers: 0, totalDuration: 0, totalVideos: 0 };
         }
         const sourceStats = monthlyStats?.length ? monthlyStats : dailyStats;
-        const lastStat = sourceStats[sourceStats.length -1];
-
+        const lastStat = sourceStats[sourceStats.length - 1];
         return {
             totalUsers: lastStat?.total_users_count || 0,
             totalDuration: Math.round((lastStat?.total_presentation_duration_seconds || 0) / 60),
@@ -511,25 +520,14 @@ export const AdminDashboardPage = () => {
         return d.toLocaleDateString('uk-UA', { day: 'numeric', month: 'short' }).replace('.', '');
     };
 
-    // Force trigger scroll event after render to help intersection observer
-    useEffect(() => {
-        const triggerScroll = () => {
-            window.dispatchEvent(new CustomEvent('scroll'));
-        };
-
-        // Trigger after a small delay to ensure everything is rendered
-        const timeoutId = setTimeout(triggerScroll, 300);
-        return () => clearTimeout(timeoutId);
-    }, [allUsers.length, allModerators.length, selectedTab]);
-
     return (
         <div className="admin-dashboard-container">
             <header className="admin-header">
-                <div className="header-left">
+                <div className="admin-header-left">
                     <Logo role={Role.Admin} />
                 </div>
-                <div className="header-right">
-                    <div className="logout-button" onClick={handleLogout}>
+                <div className="admin-header-right">
+                    <div className="admin-logout-button" onClick={handleLogout}>
                         <img src={logoutIcon} alt="Вихід" />
                     </div>
                 </div>
@@ -538,65 +536,64 @@ export const AdminDashboardPage = () => {
             <div className="admin-main">
                 <aside className="admin-sidebar">
                     <nav className="admin-nav">
-                        <div className={`nav-item ${selectedTab === "users" ? "active" : ""}`} onClick={() => setSelectedTab("users")}>Користувачі</div>
-                        <div className={`nav-item ${selectedTab === "moderators" ? "active" : ""}`} onClick={() => setSelectedTab("moderators")}>Модератори</div>
-                        <div className={`nav-item ${selectedTab === "statistics" ? "active" : ""}`} onClick={() => setSelectedTab("statistics")}>Статистики</div>
+                        <div className={`admin-nav-item ${selectedTab === "users" ? "active" : ""}`} onClick={() => setSelectedTab("users")}>Користувачі</div>
+                        <div className={`admin-nav-item ${selectedTab === "moderators" ? "active" : ""}`} onClick={() => setSelectedTab("moderators")}>Модератори</div>
+                        <div className={`admin-nav-item ${selectedTab === "statistics" ? "active" : ""}`} onClick={() => setSelectedTab("statistics")}>Статистики</div>
                     </nav>
                 </aside>
 
                 <main className="admin-content">
-                    <div className="content-header">
-                        <h1 className="page-title">
+                    <div className="admin-content-header">
+                        <h1 className="admin-page-title">
                             {selectedTab === "users" ? "Користувачі" : selectedTab === "moderators" ? "Модератори" : "Статистики"}
                         </h1>
                     </div>
 
                     {selectedTab !== "statistics" && (
-                        <div className="search-and-filters-container">
-                            <div className="search-box">
-                                <img src={searchIcon} alt="Пошук" className="search-icon" />
-                                <input type="text" placeholder={selectedTab === "users" ? "Пошук користувачів..." : "Пошук модераторів..."} className="search-input" value={search} onChange={e => setSearch(e.target.value)} />
+                        <div className="admin-search-filters-container">
+                            <div className="admin-search-box">
+                                <img src={searchIcon} alt="Пошук" className="admin-search-icon" />
+                                <input type="text" placeholder={selectedTab === "users" ? "Пошук користувачів..." : "Пошук модераторів..."} className="admin-search-input" value={search} onChange={e => setSearch(e.target.value)} />
                             </div>
-                            <div className="sort-by-registered">
-                                <button className={`filter-tab ${(selectedTab === "users" ? userSort : modSort) === (selectedTab === "users" ? "registeredAt" : "joinedAt") ? "active" : ""}`} onClick={selectedTab === "users" ? setSortByUserRegisteredAt : setSortByModJoinedAt}>{selectedTab === "users" ? "Останні зареєстровані" : "Останні додані"}</button>
+                            <div className="admin-sort-by-registered">
+                                <button className={`admin-filter-tab ${(selectedTab === "users" ? userSort : modSort) === (selectedTab === "users" ? "registeredAt" : "joinedAt") ? "active" : ""}`} onClick={selectedTab === "users" ? setSortByUserRegisteredAt : setSortByModJoinedAt}>{selectedTab === "users" ? "Останні зареєстровані" : "Останні додані"}</button>
                             </div>
-                            <button className={`filter-tab ${(selectedTab === "users" ? userSort : modSort) === "name" ? "active" : ""}`} onClick={selectedTab === "users" ? setSortByUserName : setSortByModName}>За алфавітом</button>
+                            <button className={`admin-filter-tab ${(selectedTab === "users" ? userSort : modSort) === "name" ? "active" : ""}`} onClick={selectedTab === "users" ? setSortByUserName : setSortByModName}>За алфавітом</button>
                         </div>
                     )}
 
                     {selectedTab === "users" && (
-                        <div className="content-list">
-                            {isLoading ? <div className="loading-state">Завантаження...</div> : allUsers.length === 0 ? <div className="empty-state">Користувачів не знайдено</div> : (
-                                <div className="scrollable-container">
-                                    <div className="items-list" ref={userListRef}>
+                        <div className="admin-content-list">
+                            {isLoading ? <div className="admin-loading-state">Завантаження...</div> : allUsers.length === 0 ? <div className="admin-empty-state">Користувачів не знайдено</div> : (
+                                <div className="admin-scrollable-container">
+                                    <div className="admin-items-list" ref={userListRef}>
                                         {allUsers.map(user => (
-                                            <div key={user.user_id} className="list-item">
-                                                <div className="item-info">
-                                                    <Avatar src={user.avatar ? import.meta.env.VITE_APP_API_BASE_URL + user.avatar : null} alt={user.first_name} size={40} />
-                                                    <div className="item-details">
-                                                        <div className="item-name">{user.first_name} {user.last_name}</div>
-                                                        <div className="item-subtitle">{user.has_premium ? "Преміум" : "Не преміум"}</div>
+                                            <div key={`user-${user.user_id}`} className="admin-list-item">
+                                                <div className="admin-item-info">
+                                                    <Avatar src={user.avatar ? import.meta.env.VITE_APP_API_BASE_URL + user.avatar : null} alt={user.first_name + " " + user.last_name} name={user.first_name} surname={user.last_name} size={40} />
+                                                    <div className="admin-item-details">
+                                                        <div className="admin-item-name">{user.first_name} {user.last_name}</div>
+                                                        <div className="admin-item-subtitle">{user.has_premium ? "Преміум" : "Не преміум"}</div>
                                                     </div>
                                                 </div>
-                                                <div className="item-email">{user.email}</div>
-                                                <div className="item-date">
-                                                    <div className="date-label">Реєстрація:</div>
-                                                    <div className="date-value">{formatDate(user.registered_at)}</div>
+                                                <div className="admin-item-email">{user.email}</div>
+                                                <div className="admin-item-date">
+                                                    <div className="admin-date-label">Реєстрація:</div>
+                                                    <div className="admin-date-value">{formatDate(user.registered_at)}</div>
                                                 </div>
-                                                <div className="item-actions">
-                                                    <button className="action-btn edit-btn" onClick={() => handleEditUser(user.user_id)} aria-label="Редагувати користувача"><img src={editIcon} alt="Редагувати" /></button>
-                                                    <button className="action-btn delete-btn" onClick={() => handleDeleteItem(user.user_id, "user")} aria-label="Видалити користувача"><img src={deleteIcon} alt="Видалити" /></button>
+                                                <div className="admin-item-actions">
+                                                    <button className="admin-action-btn admin-edit-btn" onClick={() => handleEditUser(user.user_id)} aria-label="Редагувати користувача"><img src={editIcon} alt="Редагувати" /></button>
+                                                    <button className="admin-action-btn admin-delete-btn" onClick={() => handleDeleteItem(user.user_id, "user")} aria-label="Видалити користувача"><img src={deleteIcon} alt="Видалити" /></button>
                                                 </div>
                                             </div>
                                         ))}
-                                        {/* Loading indicator for infinite scroll */}
                                         <div
                                             ref={userLoaderRef}
-                                            className="loading-more"
+                                            className="admin-loading-more"
                                             style={{ display: hasMoreUsers ? 'flex' : 'none' }}
                                         >
-                                            {loadingMore && <div className="spinner"></div>}
-                                            {!loadingMore && hasMoreUsers && <div className="scroll-hint">Прокрутіть для завантаження більше</div>}
+                                            {loadingMoreUsers && <div className="admin-spinner"></div>}
+                                            {!loadingMoreUsers && hasMoreUsers && <div className="admin-scroll-hint">Прокрутіть для завантаження більше</div>}
                                         </div>
                                     </div>
                                 </div>
@@ -605,37 +602,36 @@ export const AdminDashboardPage = () => {
                     )}
 
                     {selectedTab === "moderators" && (
-                        <div className="content-list">
-                            {isLoading ? <div className="loading-state">Завантаження...</div> : allModerators.length === 0 ? <div className="empty-state">Модераторів не знайдено</div> : (
-                                <div className="scrollable-container">
-                                    <div className="items-list" ref={modListRef}>
+                        <div className="admin-content-list">
+                            {isLoading ? <div className="admin-loading-state">Завантаження...</div> : allModerators.length === 0 ? <div className="admin-empty-state">Модераторів не знайдено</div> : (
+                                <div className="admin-scrollable-container">
+                                    <div className="admin-items-list" ref={modListRef}>
                                         {allModerators.map(moderator => (
-                                            <div key={moderator.moderator_id} className="list-item">
-                                                <div className="item-info">
-                                                    <Avatar src={moderator.avatar ? import.meta.env.VITE_APP_API_BASE_URL + moderator.avatar : null} alt={moderator.first_name} size={40} />
-                                                    <div className="item-details">
-                                                        <div className="item-name">{moderator.first_name} {moderator.last_name}</div>
+                                            <div key={`mod-${moderator.moderator_id}`} className="admin-list-item">
+                                                <div className="admin-item-info">
+                                                    <Avatar src={moderator.avatar ? import.meta.env.VITE_APP_API_BASE_URL + moderator.avatar : undefined} alt={moderator.first_name + " " + moderator.last_name} name={moderator.first_name} surname={moderator.last_name} size={40} />
+                                                    <div className="admin-item-details">
+                                                        <div className="admin-item-name">{moderator.first_name} {moderator.last_name}</div>
                                                     </div>
                                                 </div>
-                                                <div className="item-email">{moderator.email}</div>
-                                                <div className="item-date">
-                                                    <div className="date-label">Приєднався:</div>
-                                                    <div className="date-value">{formatDate(moderator.joined_at)}</div>
+                                                <div className="admin-item-email">{moderator.email}</div>
+                                                <div className="admin-item-date">
+                                                    <div className="admin-date-label">Приєднався:</div>
+                                                    <div className="admin-date-value">{formatDate(moderator.joined_at)}</div>
                                                 </div>
-                                                <div className="item-actions">
-                                                    <button className="action-btn edit-btn" onClick={() => handleEditModerator(moderator.moderator_id)} aria-label="Редагувати модератора"><img src={editIcon} alt="Редагувати" /></button>
-                                                    <button className="action-btn delete-btn" onClick={() => handleDeleteItem(moderator.moderator_id, "moderator")} aria-label="Видалити модератора"><img src={deleteIcon} alt="Видалити" /></button>
+                                                <div className="admin-item-actions">
+                                                    <button className="admin-action-btn admin-edit-btn" onClick={() => handleEditModerator(moderator.moderator_id)} aria-label="Редагувати модератора"><img src={editIcon} alt="Редагувати" /></button>
+                                                    <button className="admin-action-btn admin-delete-btn" onClick={() => handleDeleteItem(moderator.moderator_id, "moderator")} aria-label="Видалити модератора"><img src={deleteIcon} alt="Видалити" /></button>
                                                 </div>
                                             </div>
                                         ))}
-                                        {/* Loading indicator for infinite scroll */}
                                         <div
                                             ref={modLoaderRef}
-                                            className="loading-more"
+                                            className="admin-loading-more"
                                             style={{ display: hasMoreModerators ? 'flex' : 'none' }}
                                         >
-                                            {loadingMore && <div className="spinner"></div>}
-                                            {!loadingMore && hasMoreModerators && <div className="scroll-hint">Прокрутіть для завантаження більше</div>}
+                                            {loadingMoreModerators && <div className="admin-spinner"></div>}
+                                            {!loadingMoreModerators && hasMoreModerators && <div className="admin-scroll-hint">Прокрутіть для завантаження більше</div>}
                                         </div>
                                     </div>
                                 </div>
@@ -645,54 +641,60 @@ export const AdminDashboardPage = () => {
 
                     {selectedTab === "statistics" && (
                         <>
-                            {isLoading ? <div className="loading-state">Завантаження даних статистики...</div> : (
+                            {isLoading ? <div className="admin-loading-state">Завантаження даних статистики...</div> : (
                                 <>
-                                    <div className="stats-grid">
-                                        <div className="stats-card">
-                                            <h3 className="stats-card-title">Тривалість презентацій</h3>
-                                            <div className="chart-container"><canvas ref={activityChartRef}></canvas></div>
+                                    <div className="admin-stats-grid">
+                                        <div className="stats-admin-card">
+                                            <h3 className="admin-stats-card-title">Тривалість презентацій</h3>
+                                            <div className="admin-chart-container" style={{ height: "240px" }}>
+                                                <canvas ref={activityChartRef}></canvas>
+                                            </div>
                                         </div>
-                                        <div className="stats-card">
-                                            <h3 className="stats-card-title">Зростання кількості користувачів</h3>
-                                            <div className="chart-container"><canvas ref={usersChartRef}></canvas></div>
+                                        <div className="stats-admin-card">
+                                            <h3 className="admin-stats-card-title">Зростання кількості користувачів</h3>
+                                            <div className="admin-chart-container" style={{ height: "240px" }}>
+                                                <canvas ref={usersChartRef}></canvas>
+                                            </div>
                                         </div>
-                                        <div className="stats-card">
-                                            <h3 className="stats-card-title">Записані відео</h3>
-                                            <div className="chart-container"><canvas ref={videosChartRef}></canvas></div>
+                                        <div className="stats-admin-card">
+                                            <h3 className="admin-stats-card-title">Записані відео</h3>
+                                            <div className="admin-chart-container" style={{ height: "240px" }}>
+                                                <canvas ref={videosChartRef}></canvas>
+                                            </div>
                                         </div>
-                                        <div className="stats-card stats-summary-card">
-                                            <div className="stats-summary-item">
-                                                <div className="stats-summary-icon user-icon">
-                                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#ffffff" width="24" height="24"><path d="M12,12c2.21,0 4,-1.79 4,-4s-1.79,-4 -4,-4 -4,1.79 -4,4 1.79,4 4,4zM12,14c-2.67,0 -8,1.34 -8,4v2h16v-2c0,-2.66 -5.33,-4 -8,-4z"/></svg>
+                                        <div className="stats-admin-card admin-stats-summary-card">
+                                            <div className="admin-stats-summary-item">
+                                                <div className="admin-stats-summary-icon admin-user-icon">
+                                                    <img src={userIcon} alt="Users" width="24" height="24" />
                                                 </div>
-                                                <div className="stats-summary-content">
+                                                <div className="admin-stats-summary-content">
                                                     <h4>Загальна кількість користувачів</h4>
-                                                    <div className="stats-summary-value">{statsSummary.totalUsers}</div>
+                                                    <div className="admin-stats-summary-value">{statsSummary.totalUsers}</div>
                                                 </div>
                                             </div>
-                                            <div className="stats-summary-item">
-                                                <div className="stats-summary-icon presentation-icon">
-                                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#ffffff" width="24" height="24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"/></svg>
+                                            <div className="admin-stats-summary-item">
+                                                <div className="admin-stats-summary-icon admin-presentation-icon">
+                                                    <img src={whiteTimeIcon} alt="Time" width="24" height="24" />
                                                 </div>
-                                                <div className="stats-summary-content">
+                                                <div className="admin-stats-summary-content">
                                                     <h4>Загальна тривалість презентацій</h4>
-                                                    <div className="stats-summary-value">{statsSummary.totalDuration} хв</div>
+                                                    <div className="admin-stats-summary-value">{statsSummary.totalDuration} хв</div>
                                                 </div>
                                             </div>
-                                            <div className="stats-summary-item">
-                                                <div className="stats-summary-icon video-icon">
-                                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#ffffff" width="24" height="24"><path d="M17,10.5V7A1,1 0 0,0 16,6H4A1,1 0 0,0 3,7V17A1,1 0 0,0 4,18H16A1,1 0 0,0 17,17V13.5L21,17.5V6.5L17,10.5Z"/></svg>
+                                            <div className="admin-stats-summary-item">
+                                                <div className="admin-stats-summary-icon admin-video-icon">
+                                                    <img src={videoIcon} alt="Videos" width="24" height="24" />
                                                 </div>
-                                                <div className="stats-summary-content">
+                                                <div className="admin-stats-summary-content">
                                                     <h4>Загальна кількість записів</h4>
-                                                    <div className="stats-summary-value">{statsSummary.totalVideos}</div>
+                                                    <div className="admin-stats-summary-value">{statsSummary.totalVideos}</div>
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
-                                    <div className="stats-time-selector">
-                                        <button className={`time-range-btn ${statsTimeRange === "days" ? "active" : ""}`} onClick={() => setStatsTimeRange("days")}>Дні</button>
-                                        <button className={`time-range-btn ${statsTimeRange === "months" ? "active" : ""}`} onClick={() => setStatsTimeRange("months")}>Місяці</button>
+                                    <div className="admin-stats-time-selector">
+                                        <button className={`admin-time-range-btn ${statsTimeRange === "days" ? "active" : ""}`} onClick={() => setStatsTimeRange("days")}>Дні</button>
+                                        <button className={`admin-time-range-btn ${statsTimeRange === "months" ? "active" : ""}`} onClick={() => setStatsTimeRange("months")}>Місяці</button>
                                     </div>
                                 </>
                             )}
@@ -700,15 +702,38 @@ export const AdminDashboardPage = () => {
                     )}
 
                     {selectedTab !== "statistics" && (
-                        <button className="fab" onClick={handleAdd} aria-label="Додати">+</button>
+                        <button className="admin-fab" onClick={handleAdd} aria-label="Додати">+</button>
                     )}
                 </main>
             </div>
 
-            {selectedUser && <UpdateProfileModal initialProfile={{first_name: selectedUser.first_name, last_name: selectedUser.last_name, avatar: selectedUser.avatar}} open={showUserEditModal} onClose={() => { setShowUserEditModal(false); setSelectedUser(null);}} onSave={handleUpdateUser} loading={userActionLoading}/>}
-            {selectedModerator && <UpdateProfileModal initialProfile={{first_name: selectedModerator.first_name, last_name: selectedModerator.last_name, avatar: selectedModerator.avatar}} open={showModeratorEditModal} onClose={() => { setShowModeratorEditModal(false); setSelectedModerator(null);}} onSave={handleUpdateModerator} loading={modActionLoading}/>}
-            <ErrorModal show={showErrorModal || hasError} onClose={() => setShowErrorModal(false)} message={getErrorMessage()}/>
-            <ConfirmationModal open={showConfirmModal} onClose={() => { setShowConfirmModal(false); setItemToDelete(null);}} onConfirm={confirmDelete} confirmationTitle="" confirmationDescription={itemToDelete ? `Ви впевнені, що хочете видалити ${itemToDelete.type === "user" ? "користувача" : "модератора"} ${itemToDelete.firstName} ${itemToDelete.lastName}?` : ""}/>
+            {selectedUser && <UpdateProfileModal initialProfile={{ first_name: selectedUser.first_name, last_name: selectedUser.last_name, avatar: selectedUser.avatar }} open={showUserEditModal} onClose={() => { setShowUserEditModal(false); setSelectedUser(null); }} onSave={handleUpdateUser} loading={userActionLoading} />}
+            {selectedModerator && <UpdateProfileModal initialProfile={{ first_name: selectedModerator.first_name, last_name: selectedModerator.last_name, avatar: selectedModerator.avatar }} open={showModeratorEditModal} onClose={() => { setShowModeratorEditModal(false); setSelectedModerator(null); }} onSave={handleUpdateModerator} loading={modActionLoading} />}
+            <ConfirmationModal open={showConfirmModal} onClose={() => { setShowConfirmModal(false); setItemToDelete(null); }} onConfirm={confirmDelete} confirmationTitle="" confirmationDescription={itemToDelete ? `Ви впевнені, що хочете видалити ${itemToDelete.type === "user" ? "користувача" : "модератора"} ${itemToDelete.firstName} ${itemToDelete.lastName}?` : ""} />
+
+            <AdminInvite
+                key={`user-invite-${userInviteKey}`}
+                open={showUserInviteModal}
+                onClose={() => setShowUserInviteModal(false)}
+                onSend={handleSendUserInvite}
+                type="user"
+                loading={inviteLoading}
+            />
+
+            <AdminInvite
+                key={`moderator-invite-${moderatorInviteKey}`}
+                open={showModeratorInviteModal}
+                onClose={() => setShowModeratorInviteModal(false)}
+                onSend={handleSendModeratorInvite}
+                type="moderator"
+                loading={inviteLoading}
+            />
+
+            <ErrorModal
+                show={showErrorModal || hasError}
+                onClose={clearAllErrors}
+                message={getErrorMessage()}
+            />
         </div>
     );
 };
