@@ -11,15 +11,18 @@ import ResetPasswordPage from "./pages/forgotPassword/ResetPasswordPage.tsx";
 import {Role} from "./types/role.ts";
 import ProtectedRoute from "./components/route/ProtectedRoute.tsx";
 import UserDashboardPage from "./pages/userDashboard/UserDashboardPage.tsx";
-import PresentationPage from "./pages/presentation/PresentationPage.tsx";
 import {ProfileProvider} from "./hooks/ProfileContext.tsx";
 import InviteAcceptPage from "./pages/inviteAccept/InviteAcceptPage.tsx";
 import VideoPlayerPage from "./pages/videoPlayerPage/VideoPlayerPage.tsx";
 import ModeratorChatPage from "./pages/chat/ModeratorChatPage.tsx";
+import AdminDashboardPage from "./pages/admin/AdminDashboardPage.tsx";
 import PresentationEditTextPage from "./pages/presentationEditText/PresentationTextEditorPage.tsx";
 import TeleprompterPage from "./pages/teleprompter/TeleprompterPage.tsx";
 import {useAuth} from "./hooks/useAuth.ts";
 import {VideoUploadQueueProvider} from "./hooks/VideoUploadQueueProvider.tsx";
+import PresentationPage from "./pages/presentation/PresentationPage.tsx";
+import PrivacyPolicyPage from "./pages/static/PrivacyPolicyPage.tsx";
+import UserDataDeletionPage from "./pages/static/UserDataDeletionPage.tsx";
 
 function App() {
     const {getToken} = useAuth();
@@ -76,10 +79,10 @@ function App() {
                         />
 
                         <Route
-                            path="/presentation/:id"
+                            path="/moderator/chats"
                             element={
-                                <ProtectedRoute role={Role.User}>
-                                    <PresentationPage/>
+                                <ProtectedRoute role={Role.Moderator}>
+                                    <ModeratorChatPage/>
                                 </ProtectedRoute>
                             }
                         />
@@ -92,6 +95,16 @@ function App() {
                                 </ProtectedRoute>
                             }
                         />
+
+                        <Route
+                            path="/admin/dashboard"
+                            element={
+                                <ProtectedRoute role={Role.Admin}>
+                                    <AdminDashboardPage/>
+                                </ProtectedRoute>
+                            }
+                        />
+
                         <Route
                             path="/presentation/:id"
                             element={
@@ -121,6 +134,8 @@ function App() {
 
                         <Route path="/invite/:code" element={<InviteAcceptPage/>}/>
                         <Route path="/video/:shareCode" element={<VideoPlayerPage/>}/>
+                        <Route path="privacy-policy" element={<PrivacyPolicyPage/>}/>
+                        <Route path="user-data-deletion" element={<UserDataDeletionPage/>}/>
 
                         <Route path="*" element={<NotFound/>}/>
                     </Routes>
