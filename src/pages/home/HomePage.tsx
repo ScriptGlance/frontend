@@ -11,13 +11,13 @@ import {
 } from "../../components/appButton/AppButton.tsx";
 import { JSX } from "react";
 import { useNavigate } from "react-router-dom";
+import {APK_URL} from "../../contstants.ts";
 
 export const HomePage = (): JSX.Element => {
   const navigate = useNavigate();
 
   const handleDownloadApk = () => {
-
-    console.log("Downloading APK...");
+    location.href = APK_URL;
   };
 
   return (
