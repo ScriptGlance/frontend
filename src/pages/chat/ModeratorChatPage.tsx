@@ -24,6 +24,7 @@ import {NewMessageEvent} from "../../api/socket/chatSocketManager.ts";
 import {useProfile} from "../../hooks/ProfileContext.tsx";
 import {ModeratorProfile} from "../../api/repositories/profileRepository.ts";
 import {Title} from "react-head";
+import ChangePasswordModal from "../../components/modals/changePasswordModal/ChangePasswordModal.tsx";
 
 type ChatTab = "my" | "general" | "history";
 
@@ -318,7 +319,20 @@ const ModeratorChatPage: React.FC = () => {
         [chat, myChats, generalChats, refetchUnreadCounts, setMyChatsDirectly, setGeneralChatsDirectly, setHistoryChatsDirectly]
     );
 
-    const {profile} = useProfile(Role.Moderator);
+    const {profile, updateProfile} = useProfile(Role.Moderator);
+
+    const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
+
+    useEffect(() => {
+        if (profile?.is_temporary_password) {
+            setShowChangePasswordModal(true);
+        }
+    }, [profile]);
+
+    const handleChangePassword = async ({ password }: { password: string }) => {
+        await updateProfile({ password });
+        setShowChangePasswordModal(false);
+    };
 
     const handleSocketAssignmentChange = useCallback(
         (reassignedChat: ModeratorChatListItem) => {
@@ -937,6 +951,13 @@ const ModeratorChatPage: React.FC = () => {
                 cancelButtonText="Скасувати"
                 confirmButtonText="Закрити чат"
                 reloadAfterDelete={false}
+            />
+
+            <ChangePasswordModal
+                open={showChangePasswordModal}
+                onSave={handleChangePassword}
+                onClose={() => setShowChangePasswordModal(false)}
+                loading={false}
             />
         </div>
     );

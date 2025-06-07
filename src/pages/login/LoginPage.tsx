@@ -25,7 +25,17 @@ export const LoginPage: React.FC<LoginPageProps> = ({role}) => {
         e.preventDefault();
         const success = await login({email, password, role});
         if (success) {
-            navigate('/dashboard');
+            switch (role) {
+                case Role.Moderator:
+                    navigate("/moderator/dashboard");
+                    break;
+                case Role.Admin:
+                    navigate("/admin/dasboard");
+                    break;
+                default:
+                    navigate("/dashboard");
+                    break;
+            }
         } else {
             setShowErrorModal(true);
         }
