@@ -10,6 +10,7 @@ import {useAuth} from "../../hooks/useAuth.ts";
 import {EMAIL_CONFIRMATION_TIME_SECONDS} from "../../contstants.ts";
 import {Role} from "../../types/role.ts";
 import {SocialAuthButtons} from "../../components/socialAuthButtons/SocialAuthButtons.tsx";
+import {Title} from "react-head";
 
 const EMAIL_CONFIRMATION_LS_KEY = "emailConfirmationInfo";
 
@@ -187,6 +188,7 @@ export const RegisterPage = () => {
 
     return (
         <div className="register-page">
+            <Title>Реєстрація – ScriptGlance</Title>
             <header className="header">
                 <img
                     src={logo}
