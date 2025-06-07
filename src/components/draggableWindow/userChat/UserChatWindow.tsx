@@ -36,10 +36,9 @@ export const UserChatWindow: React.FC<UserChatWindowProps> = ({
         markAsRead,
         setMessages,
         refetch,
-        resetState, // новий метод для повного скидання
+        resetState,
     } = useUserChatMessages({ offset: 0, limit: MESSAGES_LIMIT });
 
-    // FULL RESET стейту при закритті чату
     useEffect(() => {
         if (!visible) {
             setInput("");
@@ -80,7 +79,6 @@ export const UserChatWindow: React.FC<UserChatWindowProps> = ({
         prevVisible.current = visible;
     }, [visible, messages.length]);
 
-    // Якщо додалося нове повідомлення і ти біля низу — прокручуємо вниз
     const prevMsgCount = useRef(0);
     useEffect(() => {
         if (
@@ -135,7 +133,6 @@ export const UserChatWindow: React.FC<UserChatWindowProps> = ({
         }
     };
 
-    // Завантаження ще повідомлень (lazy loading)
     const handleScroll = async () => {
         if (!chatBodyRef.current) return;
 
@@ -146,10 +143,9 @@ export const UserChatWindow: React.FC<UserChatWindowProps> = ({
             setLoadingMore(true);
             const prevScrollHeight = chatBodyRef.current.scrollHeight;
             const nextOffset = messages.length;
-            await fetchMessages(nextOffset, true); // fetchMessages(offset, append=true)
+            await fetchMessages(nextOffset, true);
             setLoadingMore(false);
 
-            // Відновлюємо скрол позицію після підвантаження
             setTimeout(() => {
                 if (chatBodyRef.current) {
                     chatBodyRef.current.scrollTop =

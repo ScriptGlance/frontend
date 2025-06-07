@@ -115,6 +115,7 @@ export function useModeratorChats({
     const [chats, setChats] = useState<ModeratorChatListItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [hasMore, setHasMore] = useState(true);
 
     useEffect(() => {
         const handler = setTimeout(() => {
@@ -127,11 +128,14 @@ export function useModeratorChats({
     useEffect(() => {
         setCurrentOffset(0);
         setChats([]);
+        setHasMore(true);
     }, [debouncedSearch, type]);
 
     const abortControllerRef = useRef<AbortController | null>(null);
 
     const fetchData = useCallback(async () => {
+        if (!hasMore && currentOffset > 0) return;
+
         if (abortControllerRef.current) abortControllerRef.current.abort();
 
         const abortController = new AbortController();
@@ -154,6 +158,8 @@ export function useModeratorChats({
             const data = await ChatRepository.getModeratorChats(token, params, abortController.signal);
 
             if (!abortController.signal.aborted) {
+                setHasMore(data && data.length === limit);
+
                 if (currentOffset === 0) {
                     setChats(data || []);
                 } else {
@@ -164,12 +170,13 @@ export function useModeratorChats({
             if (!abortController.signal.aborted && e.name !== "AbortError") {
                 setError(DEFAULT_ERROR_MESSAGE);
                 setChats([]);
+                setHasMore(false);
             }
         } finally {
             if (!abortController.signal.aborted) setLoading(false);
             if (abortControllerRef.current === abortController) abortControllerRef.current = null;
         }
-    }, [getToken, type, debouncedSearch, limit, currentOffset]);
+    }, [getToken, type, debouncedSearch, limit, currentOffset, hasMore]);
 
     useEffect(() => {
         fetchData();
@@ -187,8 +194,30 @@ export function useModeratorChats({
     const refetch = useCallback(() => {
         setCurrentOffset(0);
         setChats([]);
+        setHasMore(true);
         fetchData();
     }, [fetchData]);
+
+    const setChatsSafe = useCallback(
+        (updater: ModeratorChatListItem[] | ((prev: ModeratorChatListItem[]) => ModeratorChatListItem[])) => {
+            setChats(prev => {
+                let next: ModeratorChatListItem[];
+                if (typeof updater === "function") {
+                    next = (updater as (prev: ModeratorChatListItem[]) => ModeratorChatListItem[])(prev);
+                } else {
+                    next = updater;
+                }
+
+                const seen = new Set<number>();
+                return next.filter(chat => {
+                    if (seen.has(chat.chat_id)) return false;
+                    seen.add(chat.chat_id);
+                    return true;
+                });
+            });
+        },
+        []
+    );
 
     return {
         chats,
@@ -202,6 +231,8 @@ export function useModeratorChats({
         setOffset: setCurrentOffset,
         resetSearch,
         refetch,
+        setChats: setChatsSafe,
+        hasMore,
     };
 }
 
