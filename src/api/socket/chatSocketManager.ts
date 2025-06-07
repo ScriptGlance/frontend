@@ -1,4 +1,5 @@
 import {SocketClient} from "../socketClient.ts";
+import {ModeratorChatListItem} from "../repositories/chatRepository.ts";
 
 export enum ChatEventType {
     NewMessage = "new_message",
@@ -18,11 +19,6 @@ export interface NewMessageEvent {
     user_last_name: string;
     is_assigned?: boolean;
     is_new_chat?: boolean;
-}
-
-export interface AssignmentChangeEvent {
-    chatId: number;
-    isAssigned: boolean;
 }
 
 type EventCallback<T> = (event: T) => void;
@@ -66,19 +62,19 @@ class ChatSocketManager {
         this.socketClient.off(ChatEventType.NewMessage, callback);
     }
 
-    public onModeratorChatClosed(callback: (chat?: any) => void) {
+    public onModeratorChatClosed(callback: (chat: ModeratorChatListItem) => void) {
         this.socketClient.on(ChatEventType.ChatClosed, callback);
     }
 
-    public offModeratorChatClosed(callback: (chat?: any) => void) {
+    public offModeratorChatClosed(callback: (chat: ModeratorChatListItem) => void) {
         this.socketClient.off(ChatEventType.ChatClosed, callback);
     }
 
-    public onAssignmentChange(callback: EventCallback<AssignmentChangeEvent>) {
+    public onAssignmentChange(callback: (chat: ModeratorChatListItem) => void) {
         this.socketClient.on(ChatEventType.AssignmentChange, callback);
     }
 
-    public offAssignmentChange(callback: EventCallback<AssignmentChangeEvent>) {
+    public offAssignmentChange(callback: (chat: ModeratorChatListItem) => void) {
         this.socketClient.off(ChatEventType.AssignmentChange, callback);
     }
 

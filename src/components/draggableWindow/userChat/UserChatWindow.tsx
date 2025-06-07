@@ -2,11 +2,10 @@ import React, { useState, useRef, useEffect, useCallback } from "react";
 import { DraggableWindow } from "../base/DraggableWindow.tsx";
 import "./UserChatWindow.css";
 import closeIcon from "../../../assets/cross-icon-white.svg";
-import ChatRepository from "../../../api/repositories/chatRepository.ts";
-import { useAuth } from "../../../hooks/useAuth.ts";
-import { useChatSocket } from "../../../hooks/useChatSocket.ts";
-import { Role } from "../../../types/role";
 import sendIcon from "../../../assets/send-icon.svg";
+import { useUserChatMessages } from "../../../hooks/useChat.ts";
+import {useChatSocket} from "../../../hooks/useChatSocket.ts";
+import {Role} from "../../../types/role.ts";
 
 const CHAT_WIDTH = 400;
 const CHAT_HEIGHT = 550;
@@ -21,94 +20,64 @@ export const UserChatWindow: React.FC<UserChatWindowProps> = ({
                                                                   visible,
                                                                   onClose,
                                                               }) => {
-    const { getToken } = useAuth();
-
-    const [messages, setMessages] = useState<any[]>([]);
-    const [offset, setOffset] = useState(0);
-    const [hasMore, setHasMore] = useState(true);
-    const [loading, setLoading] = useState(false);
-    const [loadingMore, setLoadingMore] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-    const [isAtBottom, setIsAtBottom] = useState(true);
-
     const [input, setInput] = useState("");
+    const [isAtBottom, setIsAtBottom] = useState(true);
+    const [loadingMore, setLoadingMore] = useState(false);
+
     const chatBodyRef = useRef<HTMLDivElement | null>(null);
 
-    const wasVisible = useRef(false);
-    const markAsRead = useCallback(async () => {
-        try {
-            const token = getToken(Role.User);
-            if (!token) return;
-            await ChatRepository.markUserActiveChatAsRead(token);
-        } catch {}
-    }, [getToken]);
+    const {
+        messages,
+        loading,
+        error,
+        hasMore,
+        fetchMessages,
+        sendMessage,
+        markAsRead,
+        setMessages,
+        refetch,
+        resetState,
+    } = useUserChatMessages({ offset: 0, limit: MESSAGES_LIMIT });
 
     useEffect(() => {
-        if (visible && !wasVisible.current) {
-            markAsRead();
+        if (!visible) {
+            setInput("");
+            setIsAtBottom(true);
+            setLoadingMore(false);
+            setMessages([]);
+            resetState?.();
+            if (chatBodyRef.current) chatBodyRef.current.scrollTop = 0;
         }
-        wasVisible.current = visible;
-    }, [visible, markAsRead]);
+    }, [visible, setMessages, resetState]);
 
     useEffect(() => {
         if (visible) {
-            setOffset(0);
-            setHasMore(true);
             setMessages([]);
-            setError(null);
-            fetchMessages(0, false);
+            refetch();
         }
         // eslint-disable-next-line
-    }, [visible]);
+    }, [visible, setMessages, refetch]);
 
-    const fetchMessages = useCallback(
-        async (currentOffset = 0, append = false) => {
-            const token = getToken(Role.User);
-            if (!token) return;
 
-            if (currentOffset === 0) setLoading(true);
-            else setLoadingMore(true);
 
-            let prevScrollHeight = 0;
-            if (append && chatBodyRef.current) {
-                prevScrollHeight = chatBodyRef.current.scrollHeight;
-            }
-
-            try {
-                setError(null);
-                const data = await ChatRepository.getUserActiveChatMessages(token, {
-                    offset: currentOffset,
-                    limit: MESSAGES_LIMIT,
-                });
-
-                if (data) {
-                    if (append) {
-                        setMessages(prev => [...data, ...prev]);
-                    } else {
-                        setMessages(data);
-                    }
-                    setHasMore(data.length === MESSAGES_LIMIT);
-                } else {
-                    if (!append) setMessages([]);
-                    setHasMore(false);
-                }
-
+    const prevVisible = useRef(false);
+    useEffect(() => {
+        if (
+            visible &&
+            !prevVisible.current &&
+            chatBodyRef.current &&
+            messages.length > 0
+        ) {
+            setTimeout(() => {
                 setTimeout(() => {
-                    if (append && chatBodyRef.current) {
-                        const newScrollHeight = chatBodyRef.current.scrollHeight;
-                        chatBodyRef.current.scrollTop = newScrollHeight - prevScrollHeight;
+                    if (chatBodyRef.current) {
+                        chatBodyRef.current.scrollTop = chatBodyRef.current.scrollHeight;
                     }
                 }, 0);
-            } catch {
-                setError("Не вдалося завантажити повідомлення");
-                if (!append) setMessages([]);
-            } finally {
-                setLoading(false);
-                setLoadingMore(false);
-            }
-        },
-        [getToken]
-    );
+            }, 0);
+        }
+        prevVisible.current = visible;
+    }, [visible, messages.length]);
 
     const prevMsgCount = useRef(0);
     useEffect(() => {
@@ -123,16 +92,7 @@ export const UserChatWindow: React.FC<UserChatWindowProps> = ({
         prevMsgCount.current = messages.length;
     }, [messages.length, visible, isAtBottom]);
 
-    useEffect(() => {
-        if (visible && chatBodyRef.current) {
-            setTimeout(() => {
-                chatBodyRef.current!.scrollTop = chatBodyRef.current!.scrollHeight;
-            }, 0);
-        }
-    }, [visible]);
-
-    const visibleRef = useRef(visible);
-    useEffect(() => { visibleRef.current = visible; }, [visible]);
+    const wasVisible = useRef(false);
 
     useChatSocket({
         role: Role.User,
@@ -142,22 +102,26 @@ export const UserChatWindow: React.FC<UserChatWindowProps> = ({
                     ? prev
                     : [...prev, { ...msg, self: !msg.is_written_by_moderator }]
             );
-            if (visibleRef.current) markAsRead();
+            if (wasVisible.current) markAsRead();
         },
         onChatClosed: onClose,
     });
+
+    useEffect(() => {
+        if (visible && !wasVisible.current) {
+            markAsRead();
+        }
+        wasVisible.current = visible;
+    }, [visible, markAsRead]);
 
     const handleSend = useCallback(async () => {
         const text = input.trim();
         if (!text || text.length > 1000) return;
         try {
-            const token = getToken(Role.User);
-            if (!token) return;
-            const msg = await ChatRepository.sendUserActiveChatMessage(token, text);
-            setMessages(prev => [...prev, msg]);
+            await sendMessage(text);
             setInput("");
         } catch (e) {}
-    }, [input, getToken]);
+    }, [input, sendMessage]);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setInput(e.target.value.slice(0, 1000));
@@ -169,16 +133,25 @@ export const UserChatWindow: React.FC<UserChatWindowProps> = ({
         }
     };
 
-    const handleScroll = () => {
+    const handleScroll = async () => {
         if (!chatBodyRef.current) return;
 
         const { scrollTop, scrollHeight, clientHeight } = chatBodyRef.current;
         setIsAtBottom(scrollHeight - (scrollTop + clientHeight) < 50);
 
         if (!loadingMore && hasMore && scrollTop === 0) {
-            const nextOffset = offset + MESSAGES_LIMIT;
-            setOffset(nextOffset);
-            fetchMessages(nextOffset, true);
+            setLoadingMore(true);
+            const prevScrollHeight = chatBodyRef.current.scrollHeight;
+            const nextOffset = messages.length;
+            await fetchMessages(nextOffset, true);
+            setLoadingMore(false);
+
+            setTimeout(() => {
+                if (chatBodyRef.current) {
+                    chatBodyRef.current.scrollTop =
+                        chatBodyRef.current.scrollHeight - prevScrollHeight;
+                }
+            }, 0);
         }
     };
 
