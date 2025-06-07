@@ -33,6 +33,7 @@ import BuySubscriptionModal from "../../components/modals/buySubscription/BuySub
 import Logo from "../../components/logo/Logo.tsx";
 import {truncateText} from "../../utils/textUtils.ts";
 import {UserProfile} from "../../api/repositories/profileRepository.ts";
+import {Title} from "react-head";
 
 const PresentationPage = () => {
 
@@ -284,6 +285,9 @@ const PresentationPage = () => {
 
     return (
         <div className="presentation-page-main">
+            <Title>
+                {`${presentation?.name ? `${presentation.name} | ` : ''}Виступ – ScriptGlance`}
+            </Title>
             <div className="presentation-header-presentation">
                 <Logo onClick={handleLogoClick} premium={(profile as UserProfile | undefined)?.has_premium}/>
                 <RightHeaderButtons onLogout={handleLogout}/>

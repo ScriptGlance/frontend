@@ -58,6 +58,7 @@ import {SnackbarProps} from "../../components/snackbar/Snackbar.tsx";
 import {PUNCTUATION_REGEX} from "../../contstants.ts";
 import {Role} from "../../types/role.ts";
 import {UserProfile} from "../../api/repositories/profileRepository.ts";
+import {Title} from "react-head";
 
 interface CustomSpeechRecognition extends SpeechRecognition {
     continuous: boolean;
@@ -1741,7 +1742,6 @@ const TeleprompterPage: React.FC = () => {
             }
         };
     }, []);
-    ;
 
 
     if (!initialLoadComplete && (activeDataLoading || partsLoading)) {
@@ -1824,8 +1824,12 @@ const TeleprompterPage: React.FC = () => {
     if (!presentationId || !activeData || !parts) return <div className="teleprompter-error">Не вдалося завантажити
         дані.</div>;
 
+
     return (
         <div className="teleprompter-page">
+            <Title>
+                {`${presentation?.name ? `${presentation.name} | ` : ''}Виступ з телесуфлером – ScriptGlance`}
+            </Title>
             <ParticipantsHeader
                 pageType="teleprompter"
                 presentationName={presentation?.name}

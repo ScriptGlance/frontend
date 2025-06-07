@@ -45,6 +45,7 @@ import StructureSidebar from "../../components/structureSidebar/StructureSidebar
 import {useActiveTeleprompterData} from "../../hooks/useTeleprompterPresentation.ts";
 import {Role} from "../../types/role.ts";
 import {UserProfile} from "../../api/repositories/profileRepository.ts";
+import {Title} from "react-head";
 
 export interface PendingTextOp {
     operations: OperationComponent[];
@@ -1377,6 +1378,9 @@ const PresentationTextEditorPage: React.FC = () => {
 
     return (
         <div className="presentation-text-editor">
+            <Title>
+                {`${presentation?.name ? `${presentation.name} | ` : ''}Редагування тексту – ScriptGlance`}
+            </Title>
             <ParticipantsHeader
                 pageType='editor'
                 presentationName={presentationName}
