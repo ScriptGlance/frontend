@@ -203,10 +203,7 @@
 .admin-items-list {
     background-color: #FBFAF6;
     border-radius: 16px;
-    overflow-y: auto;
-    max-height: 600px;
     border: none;
-    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.07);
 }
 
 .admin-list-item {
@@ -535,10 +532,13 @@
     border-color: #CFCFCF;
 }
 
-.admin-scrollable-container { 
-    overflow: hidden;
+.admin-scrollable-container {
+    height: 540px;
+    overflow-y: auto;
     border-radius: 16px;
+    background: #FBFAF6;
 }
+
 
 @media (max-width: 1200px) {
     .admin-stats-grid { 
@@ -771,5 +771,40 @@
         padding: 7px 16px;
         font-size: 12px;
         border-radius: 18px;
+    }
+
+    .admin-list-loader {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        min-height: 100px;
+        width: 100%;
+        margin-bottom: 20px;
+    }
+
+    .admin-spinner {
+        border: 4px solid rgba(0, 0, 0, 0.1);
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        border-left-color: #5E806F;
+        animation: spin 1s ease infinite;
+    }
+
+    .admin-loader-text {
+        font-size: 14px;
+        color: #777;
+        margin-top: 8px;
+    }
+
+    @keyframes spin {
+        0% {
+            transform: rotate(0deg);
+        }
+        100% {
+            transform: rotate(360deg);
+        }
     }
 }
