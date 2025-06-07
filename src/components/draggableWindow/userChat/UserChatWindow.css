@@ -58,6 +58,7 @@
 }
 
 .user-chat-window__message {
+    text-align: left;
     max-width: 77%;
     margin-bottom: 14px;
     padding: 15px 20px 12px 20px;

@@ -1,10 +1,11 @@
 import { useEffect } from "react";
 import ChatSocketManager, {
     NewMessageEvent,
-    AssignmentChangeEvent,
+
 } from "../api/socket/chatSocketManager";
 import { useAuth } from "./useAuth";
 import { Role } from "../types/role";
+import {ModeratorChatListItem} from "../api/repositories/chatRepository.ts";
 
 const chatSocketManagers: { [role: string]: ChatSocketManager | undefined } = {};
 
@@ -29,10 +30,10 @@ type UserChatHandlers = {
 };
 
 type ModeratorChatHandlers = {
-    role: Role.Moderator;
-    onMessage: (msg: NewMessageEvent) => void;
-    onChatClosed: (chat?: any) => void;
-    onAssignmentChange: (event: AssignmentChangeEvent) => void;
+    role: Role;
+    onMessage: (data: NewMessageEvent) => void;
+    onChatClosed: (chat: ModeratorChatListItem) => void;
+    onAssignmentChange: (chat: ModeratorChatListItem) => void;
 };
 
 type UseChatSocketProps = UserChatHandlers | ModeratorChatHandlers;
@@ -48,11 +49,11 @@ export function useChatSocket(props: UseChatSocketProps) {
         if (props.role === Role.User) {
             manager.joinUserChat();
             manager.onUserNewMessage(props.onMessage);
-            manager.onUserChatClosed(props.onChatClosed);
+            manager.onUserChatClosed(props.onChatClosed as () => void);
 
             return () => {
                 manager.offUserNewMessage(props.onMessage);
-                manager.offUserChatClosed(props.onChatClosed);
+                manager.offUserChatClosed(props.onChatClosed as () => void);
             };
         }
 

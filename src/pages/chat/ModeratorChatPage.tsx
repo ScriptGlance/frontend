@@ -1,20 +1,14 @@
-import React, {
-    useCallback,
-    useEffect,
-    useMemo,
-    useRef,
-    useState,
-} from "react";
-import { useNavigate } from "react-router-dom";
-import { useAuth } from "../../hooks/useAuth";
-import { Role } from "../../types/role";
+import React, {useCallback, useEffect, useMemo, useRef, useState,} from "react";
+import {useNavigate} from "react-router-dom";
+import {useAuth} from "../../hooks/useAuth";
+import {Role} from "../../types/role";
 import {
     useModeratorChatActions,
+    useModeratorChatMessages,
     useModeratorChats,
     useModeratorUnreadCounts,
-    useModeratorChatMessages,
 } from "../../hooks/useChat";
-import { Avatar } from "../../components/avatar/Avatar";
+import {Avatar} from "../../components/avatar/Avatar";
 import Logo from "../../components/logo/Logo";
 import searchIcon from "../../assets/search.svg";
 import RightHeaderButtons from "../../components/rightHeaderButtons/RightHeaderButtons.tsx";
@@ -22,10 +16,13 @@ import returnChatIcon from "../../assets/return-chat.svg";
 import closeChatIcon from "../../assets/close-chat.svg";
 import takeChatIcon from "../../assets/take-chat.svg";
 import sendIcon from "../../assets/send-icon.svg";
-import { ModeratorChatListItem } from "../../api/repositories/chatRepository.ts";
+import {ChatMessage, ModeratorChatListItem} from "../../api/repositories/chatRepository.ts";
 import ConfirmationModal from "../../components/modals/deleteConfirmation/DeleteConfirmationModal.tsx";
-import { disconnectChatSocketManager, useChatSocket } from "../../hooks/useChatSocket.ts";
+import {disconnectChatSocketManager, useChatSocket} from "../../hooks/useChatSocket.ts";
 import "./ModeratorChatPage.css";
+import {NewMessageEvent} from "../../api/socket/chatSocketManager.ts";
+import {useProfile} from "../../hooks/ProfileContext.tsx";
+import {ModeratorProfile} from "../../api/repositories/profileRepository.ts";
 
 type ChatTab = "my" | "general" | "history";
 
@@ -36,7 +33,6 @@ const CHAT_TABS: { label: string; value: ChatTab }[] = [
 ];
 
 const SELECTED_TAB_KEY = "moderator_selected_tab";
-const SELECTED_CHAT_ID_KEY = "moderator_selected_chat_id";
 const LIMIT = 20;
 
 function uniqueByMessageId(messages: any[]) {
@@ -60,10 +56,7 @@ const ModeratorChatPage: React.FC = () => {
     });
 
     const [chat, setChat] = useState<ModeratorChatListItem | null>(null);
-    const [pendingChatId, setPendingChatId] = useState<number | null>(() => {
-        const savedChatId = localStorage.getItem(SELECTED_CHAT_ID_KEY);
-        return savedChatId ? parseInt(savedChatId, 10) : null;
-    });
+    const [pendingChatId, setPendingChatId] = useState<number | null>(null);
     const [messageInput, setMessageInput] = useState("");
     const [sending, setSending] = useState(false);
     const [searchValue, setSearchValue] = useState("");
@@ -73,7 +66,14 @@ const ModeratorChatPage: React.FC = () => {
     const chatRestoredRef = useRef(false);
     const scrollToBottomRef = useRef(false);
 
-    const { generalChatsUnread, myChatsUnread, refetch: refetchUnreadCounts } = useModeratorUnreadCounts();
+    const [generalChatsUnread, setGeneralChatsUnread] = useState(0);
+    const [myChatsUnread, setMyChatsUnread] = useState(0);
+    const { generalChatsUnread: fetchedGeneralChatsUnread, myChatsUnread: fetchedMyChatsUnread, refetch: refetchUnreadCounts } = useModeratorUnreadCounts();
+
+    useEffect(() => {
+        setGeneralChatsUnread(fetchedGeneralChatsUnread);
+        setMyChatsUnread(fetchedMyChatsUnread);
+    }, [fetchedGeneralChatsUnread, fetchedMyChatsUnread]);
 
     const {
         chats: myChats,
@@ -81,7 +81,8 @@ const ModeratorChatPage: React.FC = () => {
         setSearch: setMyChatsSearch,
         offset: myChatsOffset,
         setOffset: setMyChatsOffset,
-        refetch: refetchMyChats,
+        setChats: setMyChatsDirectly,
+        hasMore: hasMoreMyChats,
     } = useModeratorChats({
         type: "assigned",
         initialSearch: selectedTab === "my" ? searchValue : "",
@@ -95,7 +96,8 @@ const ModeratorChatPage: React.FC = () => {
         setSearch: setGeneralChatsSearch,
         offset: generalChatsOffset,
         setOffset: setGeneralChatsOffset,
-        refetch: refetchGeneralChats,
+        setChats: setGeneralChatsDirectly,
+        hasMore: hasMoreGeneralChats,
     } = useModeratorChats({
         type: "general",
         initialSearch: selectedTab === "general" ? searchValue : "",
@@ -109,7 +111,8 @@ const ModeratorChatPage: React.FC = () => {
         setSearch: setHistoryChatsSearch,
         offset: historyChatsOffset,
         setOffset: setHistoryChatsOffset,
-        refetch: refetchHistoryChats,
+        setChats: setHistoryChatsDirectly,
+        hasMore: hasMoreHistoryChats,
     } = useModeratorChats({
         type: "closed",
         initialSearch: selectedTab === "history" ? searchValue : "",
@@ -120,11 +123,11 @@ const ModeratorChatPage: React.FC = () => {
     const chatId = chat?.chat_id ?? null;
     const {
         messages,
-        fetchMessages,
         loadMore,
         hasMore,
         loading: messagesLoading,
         error: messagesError,
+        setMessages,
     } = useModeratorChatMessages(chatId, LIMIT, Boolean(chatId));
 
     const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -171,13 +174,6 @@ const ModeratorChatPage: React.FC = () => {
     useEffect(() => {
         localStorage.setItem(SELECTED_TAB_KEY, selectedTab);
     }, [selectedTab]);
-    useEffect(() => {
-        if (chat) {
-            localStorage.setItem(SELECTED_CHAT_ID_KEY, chat.chat_id.toString());
-        } else {
-            localStorage.removeItem(SELECTED_CHAT_ID_KEY);
-        }
-    }, [chat]);
 
     useEffect(() => {
         setHasTriedLoading(false);
@@ -223,39 +219,166 @@ const ModeratorChatPage: React.FC = () => {
     ]);
 
     const { assignChat, unassignChat, closeChat, sendMessage, markAsRead } = useModeratorChatActions();
-    const handleSocketMessage = useCallback(() => {
-        refetchMyChats();
-        refetchGeneralChats();
-        refetchHistoryChats();
-        refetchUnreadCounts();
-    }, [refetchMyChats, refetchGeneralChats, refetchHistoryChats, refetchUnreadCounts]);
+
+    const handleSocketMessage = useCallback((data: NewMessageEvent) => {
+        if (data && data.chat_message_id) {
+            const chatId = data.chat_id;
+
+            const chatInHistory = historyChats.find(c => c.user_id === data.user_id);
+            if (chatInHistory) {
+                setHistoryChatsDirectly(prev => prev.filter(c => c.chat_id !== chatInHistory.chat_id));
+                setGeneralChatsDirectly(prev => prev.some(c => c.user_id === data.user_id) ? prev : [
+                    {
+                        ...chatInHistory,
+                        chat_id: data.chat_id!,
+                        last_message: data.text,
+                        last_message_sent_date: data.sent_date,
+                        unread_messages_count: 1,
+                    },
+                    ...prev
+                ]);
+                if (selectedTab === "history" && chat?.user_id === data.user_id) {
+                    setChat(null);
+                }
+            }
+
+            if (chat && chat.chat_id === chatId) {
+                const newMessage: ChatMessage = {
+                    chat_message_id: data.chat_message_id,
+                    user_id: data.user_id,
+                    text: data.text,
+                    is_written_by_moderator: data.is_written_by_moderator,
+                    sent_date: data.sent_date,
+                };
+                setMessages(prev => uniqueByMessageId([...prev, newMessage]));
+                scrollToBottomRef.current = true;
+                if (selectedTab === "my") {
+                    markAsRead(chatId).then(() => {
+                        refetchUnreadCounts();
+                    }).catch(console.error);
+                }
+            }
+
+            const updateChatList = (setChatsFn: React.Dispatch<React.SetStateAction<ModeratorChatListItem[]>>) => {
+                return setChatsFn(prevChats => {
+                    const chatIndex = prevChats.findIndex(c => c.chat_id === chatId);
+                    if (chatIndex === -1) return prevChats;
+
+                    const updatedChats = [...prevChats];
+                    const chatToUpdate = {...updatedChats[chatIndex]};
+
+                    chatToUpdate.last_message = data.text;
+                    chatToUpdate.last_message_sent_date = data.sent_date;
+
+                    if (!data.is_written_by_moderator && (!chat || chat.chat_id !== chatId)) {
+                        chatToUpdate.unread_messages_count += 1;
+                    }
+
+                    updatedChats.splice(chatIndex, 1);
+                    updatedChats.unshift(chatToUpdate);
+
+                    if (chat && chat.chat_id === chatId) {
+                        setChat(chatToUpdate);
+                    }
+
+                    return updatedChats;
+                });
+            };
+
+            updateChatList(setMyChatsDirectly);
+            updateChatList(setGeneralChatsDirectly);
+        }
+    }, [chat, selectedTab, myChats, generalChats, historyChats, setMessages, markAsRead, setMyChatsDirectly, setGeneralChatsDirectly, setHistoryChatsDirectly, refetchUnreadCounts]
+    );
+
+
     const handleSocketChatClose = useCallback(
-        (data: any) => {
-            if (chat && data && chat.chat_id === (data.chat_id ?? data.chatId)) setChat(null);
-            refetchMyChats();
-            refetchGeneralChats();
-            refetchHistoryChats();
+        (closedChat: ModeratorChatListItem) => {
+            const chatId = closedChat.chat_id;
+            if (chat && chat.chat_id === chatId) {
+                setChat(null);
+            }
+
+            const updateLists = () => {
+                const findAndRemoveChat = (chats: ModeratorChatListItem[], setChatsFn: React.Dispatch<React.SetStateAction<ModeratorChatListItem[]>>) => {
+                    const chatIndex = chats.findIndex(c => c.chat_id === chatId);
+                    if (chatIndex === -1) return null;
+
+                    const chatToMove = {...chats[chatIndex]};
+                    setChatsFn(prev => prev.filter(c => c.chat_id !== chatId));
+
+                    return chatToMove;
+                };
+
+                let chatToMove = findAndRemoveChat(myChats, setMyChatsDirectly);
+                if (!chatToMove) {
+                    chatToMove = findAndRemoveChat(generalChats, setGeneralChatsDirectly);
+                }
+
+                if (chatToMove) {
+                    setHistoryChatsDirectly(prev => [chatToMove!, ...prev]);
+                }
+            };
+
+            updateLists();
             refetchUnreadCounts();
         },
-        [chat, refetchMyChats, refetchGeneralChats, refetchHistoryChats, refetchUnreadCounts]
+        [chat, myChats, generalChats, refetchUnreadCounts, setMyChatsDirectly, setGeneralChatsDirectly, setHistoryChatsDirectly]
     );
-    const handleSocketAssignmentChange = useCallback(() => {
-        setMyChatsOffset(0);
-        setGeneralChatsOffset(0);
-        setHistoryChatsOffset(0);
-        refetchMyChats();
-        refetchGeneralChats();
-        refetchHistoryChats();
-        refetchUnreadCounts();
-    }, [
-        setMyChatsOffset,
-        setGeneralChatsOffset,
-        setHistoryChatsOffset,
-        refetchMyChats,
-        refetchGeneralChats,
-        refetchHistoryChats,
-        refetchUnreadCounts,
-    ]);
+
+    const {profile} = useProfile(Role.Moderator);
+
+    const handleSocketAssignmentChange = useCallback(
+        (reassignedChat: ModeratorChatListItem) => {
+            const chatId = reassignedChat.chat_id;
+            const isAssigned = reassignedChat.assigned_moderator_id !== null;
+            const isAssignedToMe = reassignedChat.assigned_moderator_id === (profile as ModeratorProfile).moderator_id;
+
+            const isInMyChats = myChats.some(c => c.chat_id === chatId);
+            const isInGeneralChats = generalChats.some(c => c.chat_id === chatId);
+
+            if (isAssigned && isInGeneralChats) {
+                setGeneralChatsDirectly(prev => prev.filter(c => c.chat_id !== chatId));
+            }
+
+            if (isAssigned && isAssignedToMe && !isInMyChats) {
+                const chatToMove = generalChats.find(c => c.chat_id === chatId);
+                if (chatToMove) {
+                    setMyChatsDirectly(prev => prev.some(c => c.chat_id === chatId) ? prev : [chatToMove, ...prev]);
+                }
+            }
+
+            if (isAssigned && chat && chat.chat_id === chatId && !isAssignedToMe) {
+                setChat(null);
+            }
+
+            if (!isAssigned) {
+                setMyChatsDirectly(prev => prev.filter(c => c.chat_id !== chatId));
+                setGeneralChatsDirectly(prev => {
+                    if (prev.some(c => c.chat_id === chatId)) return prev;
+                    return [reassignedChat, ...prev];
+                });
+                if (chat && chat.chat_id === chatId) {
+                    setChat(null);
+                }
+            }
+
+            refetchUnreadCounts();
+        },
+        [
+            profile,
+            myChats,
+            generalChats,
+            setMyChatsDirectly,
+            setGeneralChatsDirectly,
+            chat,
+            setChat,
+            refetchUnreadCounts
+        ]
+    );
+
+
+
     useChatSocket({
         role: Role.Moderator,
         onMessage: handleSocketMessage,
@@ -264,8 +387,8 @@ const ModeratorChatPage: React.FC = () => {
     });
 
     useEffect(() => {
-        if (messagesEndRef.current && (messages.length > 0 || scrollToBottomRef.current)) {
-            messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+        if (messagesEndRef.current && scrollToBottomRef.current) {
+            messagesEndRef.current.scrollIntoView({ behavior: "auto" });
             scrollToBottomRef.current = false;
         }
     }, [messages, messagesLoading]);
@@ -273,10 +396,17 @@ const ModeratorChatPage: React.FC = () => {
     useEffect(() => {
         if (prevScrollHeightRef.current !== null && messagesContainerRef.current) {
             const container = messagesContainerRef.current;
-            container.scrollTop = container.scrollHeight - (prevScrollHeightRef.current ?? 0);
-            prevScrollHeightRef.current = null;
+            const newScrollTop = container.scrollHeight - prevScrollHeightRef.current;
+
+            setTimeout(() => {
+                if (messagesContainerRef.current) {
+                    messagesContainerRef.current.scrollTop = newScrollTop;
+                    prevScrollHeightRef.current = null;
+                }
+            }, 0);
         }
     }, [messages]);
+
 
     const markAsReadSentRef = useRef<number | null>(null);
     useEffect(() => {
@@ -288,12 +418,26 @@ const ModeratorChatPage: React.FC = () => {
         ) {
             markAsReadSentRef.current = chatId;
             markAsRead(chatId)
-                .catch(console.error)
-                .finally(() => {
+                .then(() => {
+                    if (chat) {
+                        setMyChatsDirectly(prev =>
+                            prev.map(c =>
+                                c.chat_id === chatId
+                                    ? {...c, unread_messages_count: 0}
+                                    : c
+                            )
+                        );
+
+                        if (chat.unread_messages_count > 0) {
+                            setChat(prev => prev ? {...prev, unread_messages_count: 0} : null);
+                        }
+                    }
                     refetchUnreadCounts();
-                });
+                })
+                .catch(console.error);
         }
-    }, [selectedTab, chatId, messages.length, markAsRead, refetchUnreadCounts]);
+    }, [selectedTab, chatId, messages.length, markAsRead, chat, refetchUnreadCounts, setMyChatsDirectly]);
+
     useEffect(() => {
         markAsReadSentRef.current = null;
     }, [chatId, selectedTab]);
@@ -322,14 +466,21 @@ const ModeratorChatPage: React.FC = () => {
         setSending(true);
         try {
             await assignChat(chat.chat_id);
-            setMyChatsOffset(0);
-            setGeneralChatsOffset(0);
-            await Promise.all([refetchMyChats(), refetchGeneralChats(), refetchUnreadCounts()]);
-            setTimeout(() => {
-                const myChatEntry = myChats.find((c) => c.chat_id === chat.chat_id);
-                if (myChatEntry) setChat(myChatEntry);
-                else setChat(null);
-            }, 100);
+
+            const chatToMove = {...chat};
+
+            setGeneralChatsDirectly(prev =>
+                prev.filter(c => c.chat_id !== chat.chat_id)
+            );
+            setMyChatsDirectly(prev => [chatToMove, ...prev]);
+
+            setChat(chatToMove);
+
+            if (selectedTab !== "my") {
+                setSelectedTab("my");
+            }
+
+            refetchUnreadCounts();
         } finally {
             setSending(false);
         }
@@ -340,11 +491,18 @@ const ModeratorChatPage: React.FC = () => {
         setSending(true);
         try {
             await unassignChat(chat.chat_id);
-            await new Promise((r) => setTimeout(r, 10));
-            setMyChatsOffset(0);
-            setGeneralChatsOffset(0);
+
+            const chatToMove = {...chat};
+
+            setMyChatsDirectly(prev =>
+                prev.filter(c => c.chat_id !== chat.chat_id)
+            );
+
+            setGeneralChatsDirectly(prev => [chatToMove, ...prev]);
+
             setChat(null);
-            await Promise.all([refetchMyChats(), refetchGeneralChats(), refetchUnreadCounts()]);
+
+            refetchUnreadCounts()
         } finally {
             setSending(false);
         }
@@ -355,11 +513,24 @@ const ModeratorChatPage: React.FC = () => {
         setSending(true);
         try {
             await closeChat(chat.chat_id);
+
+            const chatToMove = {...chat};
+
+            if (selectedTab === "my") {
+                setMyChatsDirectly(prev =>
+                    prev.filter(c => c.chat_id !== chat.chat_id)
+                );
+            } else if (selectedTab === "general") {
+                setGeneralChatsDirectly(prev =>
+                    prev.filter(c => c.chat_id !== chat.chat_id)
+                );
+            }
+
+            setHistoryChatsDirectly(prev => [chatToMove, ...prev]);
+
             setChat(null);
-            await refetchMyChats();
-            await refetchGeneralChats();
-            await refetchHistoryChats();
-            await refetchUnreadCounts();
+
+            refetchUnreadCounts();
         } finally {
             setSending(false);
         }
@@ -371,15 +542,44 @@ const ModeratorChatPage: React.FC = () => {
         const messageText = messageInput.trim();
         try {
             await sendMessage(chat.chat_id, messageText);
-            await fetchMessages(0, false);
+
+            const newMessage: ChatMessage = {
+                chat_message_id: Date.now(),
+                user_id: 0,
+                text: messageText,
+                is_written_by_moderator: true,
+                sent_date: new Date().toISOString()
+            };
+
+            setMessages(prev => [...prev, newMessage]);
+
+            const updatedChat = {
+                ...chat,
+                last_message: messageText,
+                last_message_sent_date: newMessage.sent_date
+            };
+
+            setMyChatsDirectly(prev => {
+                const index = prev.findIndex(c => c.chat_id === chat.chat_id);
+                if (index === -1) return prev;
+
+                const updatedChats = [...prev];
+                updatedChats.splice(index, 1);
+                updatedChats.unshift(updatedChat);
+                return updatedChats;
+            });
+
+            setChat(updatedChat);
+
             setMessageInput("");
             scrollToBottomRef.current = true;
-            if (textareaRef.current) {
-                textareaRef.current.style.height = "44px";
-            }
-            await refetchMyChats();
-            await refetchGeneralChats();
-            await refetchUnreadCounts();
+
+            setTimeout(() => {
+                if (textareaRef.current) {
+                    textareaRef.current.style.height = "44px";
+                    textareaRef.current.focus();
+                }
+            }, 100);
         } finally {
             setSending(false);
         }
@@ -397,7 +597,6 @@ const ModeratorChatPage: React.FC = () => {
 
     const handleLogout = () => {
         localStorage.removeItem(SELECTED_TAB_KEY);
-        localStorage.removeItem(SELECTED_CHAT_ID_KEY);
         disconnectChatSocketManager(Role.Moderator);
         logout(Role.Moderator);
         navigate("/moderator/login");
@@ -408,11 +607,11 @@ const ModeratorChatPage: React.FC = () => {
         (e: React.UIEvent<HTMLDivElement>) => {
             const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
             if (scrollHeight - scrollTop - clientHeight < 50) {
-                if (selectedTab === "my" && !myChatsLoading && myChats.length > 0) {
+                if (selectedTab === "my" && !myChatsLoading && myChats.length > 0 && hasMoreMyChats) {
                     setMyChatsOffset(myChatsOffset + LIMIT);
-                } else if (selectedTab === "general" && !generalChatsLoading && generalChats.length > 0) {
+                } else if (selectedTab === "general" && !generalChatsLoading && generalChats.length > 0 && hasMoreGeneralChats) {
                     setGeneralChatsOffset(generalChatsOffset + LIMIT);
-                } else if (selectedTab === "history" && !historyChatsLoading && historyChats.length > 0) {
+                } else if (selectedTab === "history" && !historyChatsLoading && historyChats.length > 0 && hasMoreHistoryChats) {
                     setHistoryChatsOffset(historyChatsOffset + LIMIT);
                 }
             }
@@ -423,14 +622,17 @@ const ModeratorChatPage: React.FC = () => {
             myChatsOffset,
             setMyChatsOffset,
             myChats,
+            hasMoreMyChats,
             generalChatsLoading,
             generalChatsOffset,
             setGeneralChatsOffset,
             generalChats,
+            hasMoreGeneralChats,
             historyChatsLoading,
             historyChatsOffset,
             setHistoryChatsOffset,
             historyChats,
+            hasMoreHistoryChats,
         ]
     );
 
@@ -440,7 +642,8 @@ const ModeratorChatPage: React.FC = () => {
             messagesContainerRef.current.scrollTop < 50 &&
             hasMore &&
             !messagesLoading &&
-            chatId
+            chatId &&
+            !prevScrollHeightRef.current
         ) {
             prevScrollHeightRef.current = messagesContainerRef.current.scrollHeight;
             loadMore();
@@ -483,7 +686,7 @@ const ModeratorChatPage: React.FC = () => {
                                 {tab.label}
                                 {tab.value === "general" && (
                                     generalChatsUnread > 0 ?
-                                    <span className="chats-general-count-badge">
+                                        <span className="chats-general-count-badge">
                                         {generalChatsUnread}
                                     </span> : ""
                                 )}
@@ -705,6 +908,7 @@ const ModeratorChatPage: React.FC = () => {
                           disabled={sending}
                           rows={1}
                           maxLength={1000}
+                          autoFocus
                           style={{ resize: "none", overflow: "hidden" }}
                           onKeyDown={e => {
                               if (e.key === "Enter" && !e.shiftKey) {

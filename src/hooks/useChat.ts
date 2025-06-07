@@ -3,7 +3,6 @@ import { useAuth } from "./useAuth";
 import { Role } from "../types/role";
 import ChatRepository, {
     ChatMessage, GetModeratorChatsParams,
-    GetUserChatMessagesParams,
     ModeratorChatListItem
 } from "../api/repositories/chatRepository.ts";
 
@@ -116,6 +115,7 @@ export function useModeratorChats({
     const [chats, setChats] = useState<ModeratorChatListItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [hasMore, setHasMore] = useState(true);
 
     useEffect(() => {
         const handler = setTimeout(() => {
@@ -128,11 +128,14 @@ export function useModeratorChats({
     useEffect(() => {
         setCurrentOffset(0);
         setChats([]);
+        setHasMore(true);
     }, [debouncedSearch, type]);
 
     const abortControllerRef = useRef<AbortController | null>(null);
 
     const fetchData = useCallback(async () => {
+        if (!hasMore && currentOffset > 0) return;
+
         if (abortControllerRef.current) abortControllerRef.current.abort();
 
         const abortController = new AbortController();
@@ -155,6 +158,8 @@ export function useModeratorChats({
             const data = await ChatRepository.getModeratorChats(token, params, abortController.signal);
 
             if (!abortController.signal.aborted) {
+                setHasMore(data && data.length === limit);
+
                 if (currentOffset === 0) {
                     setChats(data || []);
                 } else {
@@ -165,12 +170,13 @@ export function useModeratorChats({
             if (!abortController.signal.aborted && e.name !== "AbortError") {
                 setError(DEFAULT_ERROR_MESSAGE);
                 setChats([]);
+                setHasMore(false);
             }
         } finally {
             if (!abortController.signal.aborted) setLoading(false);
             if (abortControllerRef.current === abortController) abortControllerRef.current = null;
         }
-    }, [getToken, type, debouncedSearch, limit, currentOffset]);
+    }, [getToken, type, debouncedSearch, limit, currentOffset, hasMore]);
 
     useEffect(() => {
         fetchData();
@@ -188,8 +194,30 @@ export function useModeratorChats({
     const refetch = useCallback(() => {
         setCurrentOffset(0);
         setChats([]);
+        setHasMore(true);
         fetchData();
     }, [fetchData]);
+
+    const setChatsSafe = useCallback(
+        (updater: ModeratorChatListItem[] | ((prev: ModeratorChatListItem[]) => ModeratorChatListItem[])) => {
+            setChats(prev => {
+                let next: ModeratorChatListItem[];
+                if (typeof updater === "function") {
+                    next = (updater as (prev: ModeratorChatListItem[]) => ModeratorChatListItem[])(prev);
+                } else {
+                    next = updater;
+                }
+
+                const seen = new Set<number>();
+                return next.filter(chat => {
+                    if (seen.has(chat.chat_id)) return false;
+                    seen.add(chat.chat_id);
+                    return true;
+                });
+            });
+        },
+        []
+    );
 
     return {
         chats,
@@ -203,6 +231,8 @@ export function useModeratorChats({
         setOffset: setCurrentOffset,
         resetSearch,
         refetch,
+        setChats: setChatsSafe,
+        hasMore,
     };
 }
 
@@ -235,50 +265,88 @@ export function useModeratorUnreadCounts() {
     return { generalChatsUnread, myChatsUnread, refetch: fetchData };
 }
 
-export function useUserChatMessages(params: GetUserChatMessagesParams) {
+export function useUserChatMessages(params: { offset?: number; limit: number }) {
     const { getToken } = useAuth();
+
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [loading, setLoading] = useState(false);
+    const [loadingMore, setLoadingMore] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const abortControllerRef = useRef<AbortController | null>(null);
+    const [hasMore, setHasMore] = useState(true);
 
-    const fetchMessages = useCallback(async () => {
-        if (abortControllerRef.current) abortControllerRef.current.abort();
-        const abortController = new AbortController();
-        abortControllerRef.current = abortController;
+    const offsetRef = useRef(0);
 
-        try {
-            setLoading(true);
-            setError(null);
-            const token = getToken(Role.User);
-            if (!token) throw new Error("Not authenticated");
-
-            const data = await ChatRepository.getUserActiveChatMessages(token, params);
-            if (!abortController.signal.aborted) setMessages(data || []);
-        } catch (e: any) {
-            if (!abortControllerRef.current?.signal.aborted) {
-                setError(DEFAULT_ERROR_MESSAGE);
-                setMessages([]);
-            }
-        } finally {
-            if (!abortControllerRef.current?.signal.aborted) setLoading(false);
-            if (abortControllerRef.current === abortController) abortControllerRef.current = null;
-        }
-    }, [getToken, params]);
+    const resetState = useCallback(() => {
+        setMessages([]);
+        setLoading(false);
+        setLoadingMore(false);
+        setError(null);
+        setHasMore(true);
+        offsetRef.current = 0;
+    }, []);
 
     useEffect(() => {
-        fetchMessages();
-        return () => {
-            abortControllerRef.current?.abort();
-            abortControllerRef.current = null;
-        };
+        setMessages([]);
+        setError(null);
+        offsetRef.current = 0;
+        setHasMore(true);
+        fetchMessages(0, false);
+    }, [params.limit]);
+
+    const fetchMessages = useCallback(
+        async (currentOffset = 0, append = false) => {
+            const token = getToken(Role.User);
+            if (!token) return;
+
+            if (currentOffset === 0) setLoading(true);
+            else setLoadingMore(true);
+
+            try {
+                setError(null);
+                const data = await ChatRepository.getUserActiveChatMessages(token, {
+                    offset: currentOffset,
+                    limit: params.limit,
+                });
+
+                if (data) {
+                    if (append) {
+                        setMessages(prev => [...data, ...prev]);
+                    } else {
+                        setMessages(data);
+                    }
+                    setHasMore(data.length === params.limit);
+                } else {
+                    if (!append) setMessages([]);
+                    setHasMore(false);
+                }
+                offsetRef.current = currentOffset;
+            } catch {
+                setError(DEFAULT_ERROR_MESSAGE);
+                if (!append) setMessages([]);
+            } finally {
+                setLoading(false);
+                setLoadingMore(false);
+            }
+        },
+        [getToken, params.limit]
+    );
+
+    const loadMore = useCallback(async () => {
+        if (loadingMore || !hasMore) return;
+        const nextOffset = messages.length;
+        await fetchMessages(nextOffset, true);
+    }, [fetchMessages, loadingMore, hasMore, messages.length]);
+
+    const refetch = useCallback(() => {
+        offsetRef.current = 0;
+        fetchMessages(0, false);
     }, [fetchMessages]);
 
     const sendMessage = useCallback(async (text: string) => {
         const token = getToken(Role.User);
         if (!token) throw new Error("Not authenticated");
         const msg = await ChatRepository.sendUserActiveChatMessage(token, text);
-        setMessages((prev) => [...prev, msg]);
+        setMessages(prev => [...prev, msg]);
         return msg;
     }, [getToken]);
 
@@ -288,8 +356,22 @@ export function useUserChatMessages(params: GetUserChatMessagesParams) {
         await ChatRepository.markUserActiveChatAsRead(token);
     }, [getToken]);
 
-    return { messages, loading, error, refetch: fetchMessages, sendMessage, markAsRead, setMessages };
+    return {
+        messages,
+        loading,
+        loadingMore,
+        hasMore,
+        error,
+        fetchMessages,
+        loadMore,
+        refetch,
+        sendMessage,
+        markAsRead,
+        setMessages,
+        resetState,
+    };
 }
+
 
 export function useUserUnreadCount() {
     const { getToken } = useAuth();
