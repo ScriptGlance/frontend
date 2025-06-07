@@ -39,14 +39,16 @@ export const AdminDashboardPage = () => {
     const [modOrder, setModOrder] = useState<"asc" | "desc">("desc");
 
     const [userOffset, setUserOffset] = useState(0);
-    const [modOffset, setModOffset] = useState(0);
-
     const [allUsers, setAllUsers] = useState<any[]>([]);
-    const [allModerators, setAllModerators] = useState<any[]>([]);
     const [hasMoreUsers, setHasMoreUsers] = useState(true);
+
+    const isLoadingMoreUsersRef = useRef(false);
+
+    const [modOffset, setModOffset] = useState(0);
+    const [allModerators, setAllModerators] = useState<any[]>([]);
     const [hasMoreModerators, setHasMoreModerators] = useState(true);
-    const [loadingMoreUsers, setLoadingMoreUsers] = useState(false);
-    const [loadingMoreModerators, setLoadingMoreModerators] = useState(false);
+
+    const isLoadingMoreModeratorsRef = useRef(false);
 
     const [showUserEditModal, setShowUserEditModal] = useState(false);
     const [showModeratorEditModal, setShowModeratorEditModal] = useState(false);
@@ -76,8 +78,8 @@ export const AdminDashboardPage = () => {
     const usersChartInstance = useRef<Chart | null>(null);
     const videosChartInstance = useRef<Chart | null>(null);
 
-    const userListRef = useRef<HTMLDivElement>(null);
-    const modListRef = useRef<HTMLDivElement>(null);
+    const userContainerRef = useRef<HTMLDivElement>(null);
+    const modContainerRef = useRef<HTMLDivElement>(null);
     const userLoaderRef = useRef<HTMLDivElement>(null);
     const modLoaderRef = useRef<HTMLDivElement>(null);
     const userObserverRef = useRef<IntersectionObserver | null>(null);
@@ -95,7 +97,7 @@ export const AdminDashboardPage = () => {
         limit: ITEMS_PER_PAGE,
         offset: userOffset
     }), [search, userSort, userOrder, userOffset]);
-    const { users, loading: usersLoading, error: usersError, refetch: refetchUsers } = useAdminUsers(userQueryParams);
+    const { users, loading: usersLoadingFromHook, error: usersError} = useAdminUsers(userQueryParams);
 
     const modQueryParams = useMemo(() => ({
         search: search || undefined,
@@ -104,91 +106,168 @@ export const AdminDashboardPage = () => {
         limit: ITEMS_PER_PAGE,
         offset: modOffset
     }), [search, modSort, modOrder, modOffset]);
-    const { moderators, loading: moderatorsLoading, error: moderatorsError, refetch: refetchModerators } = useAdminModerators(modQueryParams);
+    const { moderators, loading: moderatorsLoadingFromHook, error: moderatorsError } = useAdminModerators(modQueryParams);
 
     const statsParams = useMemo(() => ({ limit: 30, offset: 0 }), []);
     const { dailyStats, loading: dailyStatsLoading, error: dailyStatsError } = useAdminDailyStats(statsParams);
     const { monthlyStats, loading: monthlyStatsLoading, error: monthlyStatsError } = useAdminMonthlyStats(statsParams);
     const { totalStats, loading: totalStatsLoading, error: totalStatsError } = useAdminTotalStats();
 
-    useEffect(() => {
-        console.log("[users] useEffect: userOffset:", userOffset, "users:", users, "usersLoading:", usersLoading);
-        if (userOffset === 0) {
-            setAllUsers(users);
-            console.log("[users] setAllUsers (reset):", users);
-        } else if (users.length > 0) {
-            setAllUsers(prev => [
-                ...prev,
-                ...users.filter(newUser => !prev.some(u => u.user_id === newUser.user_id))
-            ]);
-            console.log("[users] setAllUsers (append):", users);
-        }
-        setHasMoreUsers(users.length === ITEMS_PER_PAGE);
-        setLoadingMoreUsers(false);
-        setTimeout(setupUserObserver, 100);
-    }, [users, usersLoading, userOffset]);
-
-    useEffect(() => {
-        console.log("[users] Sorting/Search changed. Resetting offset and clearing users.");
-        setUserOffset(0);
-        setAllUsers([]);
-        setHasMoreUsers(true);
-    }, [search, userSort, userOrder]);
-
-    useEffect(() => {
-        if (modOffset === 0) setAllModerators(moderators);
-        else if (moderators.length > 0) {
-            setAllModerators(prev => [
-                ...prev,
-                ...moderators.filter(newMod => !prev.some(m => m.moderator_id === newMod.moderator_id))
-            ]);
-        }
-        setHasMoreModerators(moderators.length === ITEMS_PER_PAGE);
-        setLoadingMoreModerators(false);
-        setTimeout(setupModObserver, 100);
-    }, [moderators, moderatorsLoading, modOffset]);
-
-    useEffect(() => {
-        setModOffset(0);
-        setAllModerators([]);
-    }, [search, modSort, modOrder]);
-
     const setupUserObserver = useCallback(() => {
         if (userObserverRef.current) userObserverRef.current.disconnect();
-        if (!userLoaderRef.current) return;
 
-        userObserverRef.current = new IntersectionObserver((entries) => {
-            console.log("[userObserver] entries:", entries, "hasMoreUsers:", hasMoreUsers, "usersLoading:", usersLoading, "loadingMoreUsers:", loadingMoreUsers);
-            if (entries[0]?.isIntersecting && hasMoreUsers && !usersLoading && !loadingMoreUsers) {
-                setLoadingMoreUsers(true);
-                setUserOffset(prev => prev + ITEMS_PER_PAGE);
-                console.log("[userObserver] Triggered loading more users. New offset:", userOffset + ITEMS_PER_PAGE);
+        if (!userLoaderRef.current || !userContainerRef.current || !hasMoreUsers) return;
+
+        userObserverRef.current = new IntersectionObserver(
+            (entries) => {
+                const entry = entries[0];
+                if (
+                    entry?.isIntersecting &&
+                    hasMoreUsers &&
+                    !usersLoadingFromHook &&
+                    !isLoadingMoreUsersRef.current
+                ) {
+                    isLoadingMoreUsersRef.current = true;
+                    setUserOffset(prevOffset => prevOffset + ITEMS_PER_PAGE);
+                }
+            },
+            {
+                root: userContainerRef.current,
+                rootMargin: '0px 0px 300px 0px',
+                threshold: 0.1
             }
-        }, { root: null, rootMargin: '0px', threshold: 0.1 });
-
+        );
         userObserverRef.current.observe(userLoaderRef.current);
-    }, [hasMoreUsers, usersLoading, loadingMoreUsers, userOffset]);
+    }, [hasMoreUsers, usersLoadingFromHook, userOffset]);
+
 
     const setupModObserver = useCallback(() => {
         if (modObserverRef.current) modObserverRef.current.disconnect();
-        if (!modLoaderRef.current) return;
 
-        modObserverRef.current = new IntersectionObserver((entries) => {
-            if (entries[0]?.isIntersecting && hasMoreModerators && !moderatorsLoading && !loadingMoreModerators) {
-                setLoadingMoreModerators(true);
-                setModOffset(prev => prev + ITEMS_PER_PAGE);
+        if (!modLoaderRef.current || !modContainerRef.current || !hasMoreModerators) return;
+
+        modObserverRef.current = new IntersectionObserver(
+            (entries) => {
+                const entry = entries[0];
+                if (
+                    entry?.isIntersecting &&
+                    hasMoreModerators &&
+                    !moderatorsLoadingFromHook &&
+                    !isLoadingMoreModeratorsRef.current
+                ) {
+                    isLoadingMoreModeratorsRef.current = true;
+                    setModOffset(prevOffset => prevOffset + ITEMS_PER_PAGE);
+                }
+            },
+            {
+                root: modContainerRef.current,
+                rootMargin: '0px 0px 300px 0px',
+                threshold: 0.1
             }
-        }, { root: null, rootMargin: '0px', threshold: 0.1 });
-
+        );
         modObserverRef.current.observe(modLoaderRef.current);
-    }, [hasMoreModerators, moderatorsLoading, loadingMoreModerators]);
+    }, [hasMoreModerators, moderatorsLoadingFromHook, modOffset]);
+
+
+    useEffect(() => {
+        if (userObserverRef.current) {
+            userObserverRef.current.disconnect();
+        }
+        setAllUsers([]);
+        setUserOffset(0);
+        setHasMoreUsers(true);
+        isLoadingMoreUsersRef.current = false;
+    }, [search, userSort, userOrder]);
+
+    useEffect(() => {
+        if (selectedTab === "users") {
+            if (!usersLoadingFromHook && users) {
+                isLoadingMoreUsersRef.current = false;
+
+                if (userOffset === 0) {
+                    setAllUsers(users);
+                } else {
+                    setAllUsers(prevUsers => {
+                        const newUsersToAdd = users.filter(newUser =>
+                            !prevUsers.some(u => u.user_id === newUser.user_id)
+                        );
+                        return [...prevUsers, ...newUsersToAdd];
+                    });
+                }
+
+                setHasMoreUsers(users.length === ITEMS_PER_PAGE);
+            }
+
+            const timerId = setTimeout(() => {
+                setupUserObserver();
+            }, 100);
+
+            return () => clearTimeout(timerId);
+        }
+    }, [users, usersLoadingFromHook, userOffset, setupUserObserver, selectedTab]);
+
+    useEffect(() => {
+        if (modObserverRef.current) {
+            modObserverRef.current.disconnect();
+        }
+        setAllModerators([]);
+        setModOffset(0);
+        setHasMoreModerators(true);
+        isLoadingMoreModeratorsRef.current = false;
+    }, [search, modSort, modOrder]);
+
+    useEffect(() => {
+        if (selectedTab === "moderators") {
+            if (!moderatorsLoadingFromHook && moderators) {
+                isLoadingMoreModeratorsRef.current = false;
+
+                if (modOffset === 0) {
+                    setAllModerators(moderators);
+                } else {
+                    setAllModerators(prevModerators => {
+                        const newModsToAdd = moderators.filter(newMod =>
+                            !prevModerators.some(m => m.moderator_id === newMod.moderator_id)
+                        );
+                        return [...prevModerators, ...newModsToAdd];
+                    });
+                }
+
+                setHasMoreModerators(moderators.length === ITEMS_PER_PAGE);
+            }
+
+            const timerId = setTimeout(() => {
+                setupModObserver();
+            }, 100);
+
+            return () => clearTimeout(timerId);
+        }
+    }, [moderators, moderatorsLoadingFromHook, modOffset, setupModObserver, selectedTab]);
 
     useEffect(() => {
         return () => {
-            if (userObserverRef.current) userObserverRef.current.disconnect();
-            if (modObserverRef.current) modObserverRef.current.disconnect();
+            if (userObserverRef.current) {
+                userObserverRef.current.disconnect();
+            }
+            if (modObserverRef.current) {
+                modObserverRef.current.disconnect();
+            }
         };
     }, []);
+
+    useEffect(() => {
+        if (userObserverRef.current) {
+            userObserverRef.current.disconnect();
+        }
+        if (modObserverRef.current) {
+            modObserverRef.current.disconnect();
+        }
+
+        if (selectedTab === "users") {
+            setTimeout(() => setupUserObserver(), 100);
+        } else if (selectedTab === "moderators") {
+            setTimeout(() => setupModObserver(), 100);
+        }
+    }, [selectedTab, setupUserObserver, setupModObserver]);
 
     const handleLogout = () => {
         logout("admin");
@@ -248,10 +327,11 @@ export const AdminDashboardPage = () => {
         try {
             await inviteUser(data);
             setShowUserInviteModal(false);
-            refetchUsers();
+            setAllUsers([]);
+            setUserOffset(0);
+            isLoadingMoreUsersRef.current = false;
         } catch (error: any) {
             setShowUserInviteModal(false);
-
             if (error.status === 409) {
                 setErrorMessage("Користувач з такою адресою електронної пошти вже зареєстрований");
             } else {
@@ -268,10 +348,11 @@ export const AdminDashboardPage = () => {
         try {
             await inviteModerator(data);
             setShowModeratorInviteModal(false);
-            refetchModerators();
+            setAllModerators([]);
+            setModOffset(0);
+            isLoadingMoreModeratorsRef.current = false;
         } catch (error: any) {
             setShowModeratorInviteModal(false);
-
             if (error.status === 409) {
                 setErrorMessage("Користувач з такою адресою електронної пошти вже зареєстрований");
             } else {
@@ -307,16 +388,16 @@ export const AdminDashboardPage = () => {
         if (itemToDelete.type === "user") {
             success = await deleteUser(itemToDelete.id);
             if (success) {
-                setUserOffset(0);
                 setAllUsers([]);
-                refetchUsers();
+                setUserOffset(0);
+                isLoadingMoreUsersRef.current = false;
             }
         } else {
             success = await deleteModerator(itemToDelete.id);
             if (success) {
-                setModOffset(0);
                 setAllModerators([]);
-                refetchModerators();
+                setModOffset(0);
+                isLoadingMoreModeratorsRef.current = false;
             }
         }
         setShowConfirmModal(false);
@@ -354,12 +435,14 @@ export const AdminDashboardPage = () => {
     };
 
     const getErrorMessage = () => errorMessage || usersError || moderatorsError || userActionError || modActionError || dailyStatsError || monthlyStatsError || totalStatsError || "";
+
     const isLoading =
         selectedTab === "users"
-            ? usersLoading && userOffset === 0
+            ? usersLoadingFromHook && userOffset === 0
             : selectedTab === "moderators"
-                ? moderatorsLoading && modOffset === 0
+                ? moderatorsLoadingFromHook && modOffset === 0
                 : (dailyStatsLoading || monthlyStatsLoading || totalStatsLoading);
+
     const hasError = !!(getErrorMessage());
 
     useEffect(() => {
@@ -503,7 +586,8 @@ export const AdminDashboardPage = () => {
         if (!monthlyStats?.length && !dailyStats?.length) {
             return { totalUsers: 0, totalDuration: 0, totalVideos: 0 };
         }
-        const sourceStats = monthlyStats?.length ? monthlyStats : dailyStats;
+        const sourceStats = monthlyStats?.length ? monthlyStats : (dailyStats || []);
+        if (sourceStats.length === 0) return { totalUsers: 0, totalDuration: 0, totalVideos: 0 };
         const lastStat = sourceStats[sourceStats.length - 1];
         return {
             totalUsers: lastStat?.total_users_count || 0,
@@ -564,9 +648,9 @@ export const AdminDashboardPage = () => {
 
                     {selectedTab === "users" && (
                         <div className="admin-content-list">
-                            {isLoading ? <div className="admin-loading-state">Завантаження...</div> : allUsers.length === 0 ? <div className="admin-empty-state">Користувачів не знайдено</div> : (
-                                <div className="admin-scrollable-container">
-                                    <div className="admin-items-list" ref={userListRef}>
+                            {isLoading ? <div className="admin-loading-state">Завантаження...</div> : allUsers.length === 0 && !usersLoadingFromHook ? <div className="admin-empty-state">Користувачів не знайдено</div> : (
+                                <div className="admin-scrollable-container" ref={userContainerRef}>
+                                    <div className="admin-items-list">
                                         {allUsers.map(user => (
                                             <div key={`user-${user.user_id}`} className="admin-list-item">
                                                 <div className="admin-item-info">
@@ -587,15 +671,13 @@ export const AdminDashboardPage = () => {
                                                 </div>
                                             </div>
                                         ))}
-                                        <div
-                                            ref={userLoaderRef}
-                                            className="admin-loading-more"
-                                            style={{ display: hasMoreUsers ? 'flex' : 'none' }}
-                                        >
-                                            {loadingMoreUsers && <div className="admin-spinner"></div>}
-                                            {!loadingMoreUsers && hasMoreUsers && <div className="admin-scroll-hint">Прокрутіть для завантаження більше</div>}
-                                        </div>
                                     </div>
+                                    {hasMoreUsers && (
+                                        <div ref={userLoaderRef} className="admin-list-loader">
+                                            {usersLoadingFromHook && userOffset > 0 && <div className="admin-spinner"></div>}
+                                            {!usersLoadingFromHook && <div className="admin-loader-text">Завантаження більше користувачів...</div>}
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </div>
@@ -603,9 +685,9 @@ export const AdminDashboardPage = () => {
 
                     {selectedTab === "moderators" && (
                         <div className="admin-content-list">
-                            {isLoading ? <div className="admin-loading-state">Завантаження...</div> : allModerators.length === 0 ? <div className="admin-empty-state">Модераторів не знайдено</div> : (
-                                <div className="admin-scrollable-container">
-                                    <div className="admin-items-list" ref={modListRef}>
+                            {isLoading ? <div className="admin-loading-state">Завантаження...</div> : allModerators.length === 0 && !moderatorsLoadingFromHook ? <div className="admin-empty-state">Модераторів не знайдено</div> : (
+                                <div className="admin-scrollable-container" ref={modContainerRef}>
+                                    <div className="admin-items-list">
                                         {allModerators.map(moderator => (
                                             <div key={`mod-${moderator.moderator_id}`} className="admin-list-item">
                                                 <div className="admin-item-info">
@@ -625,15 +707,13 @@ export const AdminDashboardPage = () => {
                                                 </div>
                                             </div>
                                         ))}
-                                        <div
-                                            ref={modLoaderRef}
-                                            className="admin-loading-more"
-                                            style={{ display: hasMoreModerators ? 'flex' : 'none' }}
-                                        >
-                                            {loadingMoreModerators && <div className="admin-spinner"></div>}
-                                            {!loadingMoreModerators && hasMoreModerators && <div className="admin-scroll-hint">Прокрутіть для завантаження більше</div>}
-                                        </div>
                                     </div>
+                                    {hasMoreModerators && (
+                                        <div ref={modLoaderRef} className="admin-list-loader">
+                                            {moderatorsLoadingFromHook && modOffset > 0 && <div className="admin-spinner"></div>}
+                                            {!moderatorsLoadingFromHook && <div className="admin-loader-text">Завантаження більше модераторів...</div>}
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </div>
