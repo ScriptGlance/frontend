@@ -7,6 +7,7 @@ import { BeigeButton } from "../../components/appButton/AppButton";
 import ErrorModal from "../../components/modals/error/ErrorModal.tsx";
 import { useAuth } from "../../hooks/useAuth";
 import "./ForgotPasswordPage.css";
+import {Title} from "react-head";
 
 type JWTPayload = { role?: string };
 
@@ -58,6 +59,7 @@ export const ResetPasswordPage = () => {
 
     return (
         <div className="forgot-password-page">
+            <Title>Відновлення паролю – ScriptGlance</Title>
             <header className="header">
                 <img
                     src={logo}

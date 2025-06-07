@@ -57,6 +57,8 @@ import {
 import {SnackbarProps} from "../../components/snackbar/Snackbar.tsx";
 import {PUNCTUATION_REGEX} from "../../contstants.ts";
 import {Role} from "../../types/role.ts";
+import {UserProfile} from "../../api/repositories/profileRepository.ts";
+import {Title} from "react-head";
 
 interface CustomSpeechRecognition extends SpeechRecognition {
     continuous: boolean;
@@ -130,13 +132,13 @@ const TeleprompterPage: React.FC = () => {
     const maxFreeVideoCount = config?.premium_config.max_free_video_count ?? 10;
     const {videos} = usePresentationVideos(presentationId);
     const myUploadedVideosCount = useMemo(() => (
-        videos.filter(v => v.video_author.user_id === profile?.user_id).length
-    ), [videos, profile?.user_id]);
+        videos.filter(v => v.video_author.user_id === (profile as UserProfile | undefined)?.user_id).length
+    ), [videos, (profile as UserProfile | undefined)?.user_id]);
 
     const [myNotUploadedVideos, setMyNotUploadedVideos] = useState(0);
 
     const myTotalVideoCount = myUploadedVideosCount + myNotUploadedVideos;
-    const isVideoRecordingAllowed = !!profile?.has_premium || (myTotalVideoCount < maxFreeVideoCount);
+    const isVideoRecordingAllowed = !!(profile as UserProfile | undefined)?.has_premium || (myTotalVideoCount < maxFreeVideoCount);
     const isVideoRecordingAllowedRef = useRef(isVideoRecordingAllowed);
 
     useEffect(() => {
@@ -305,7 +307,7 @@ const TeleprompterPage: React.FC = () => {
     };
 
 
-    const myActiveUser = teleprompterActiveUsers.find(u => u.userId === profile?.user_id);
+    const myActiveUser = teleprompterActiveUsers.find(u => u.userId === (profile as UserProfile | undefined)?.user_id);
     const isVideoRecordingModeActive = !!myActiveUser?.isRecordingModeActive;
 
     useEffect(() => {
@@ -453,7 +455,7 @@ const TeleprompterPage: React.FC = () => {
     );
 
     useEffect(() => {
-        if (profile && !profile.has_premium && isVideoRecordingModeActive && !isVideoRecordingAllowed) {
+        if (profile && !(profile as UserProfile).has_premium && isVideoRecordingModeActive && !isVideoRecordingAllowed) {
             setRecordingMode(presentationId, false);
         }
     }, [isVideoRecordingAllowed, profile, isVideoRecordingModeActive, setRecordingMode, presentationId]);
@@ -507,7 +509,7 @@ const TeleprompterPage: React.FC = () => {
     }, [activeData, parts, initialLoadComplete]);
 
     const isCurrentUserOwner = useMemo(() => {
-        return profile?.user_id === currentTeleprompterOwnerId;
+        return (profile as UserProfile | undefined)?.user_id === currentTeleprompterOwnerId;
     }, [profile, currentTeleprompterOwnerId]);
 
     const sortedParts = useMemo(() => {
@@ -590,29 +592,29 @@ const TeleprompterPage: React.FC = () => {
     }, []);
 
     useEffect(() => {
-        if (previousOwnerIdRef.current === null || !profile?.user_id) {
+        if (previousOwnerIdRef.current === null || !(profile as UserProfile | undefined)?.user_id) {
             previousOwnerIdRef.current = currentTeleprompterOwnerId;
             return;
         }
 
-        const wasOwner = previousOwnerIdRef.current === profile.user_id;
-        const isOwner = currentTeleprompterOwnerId === profile.user_id;
+        const wasOwner = previousOwnerIdRef.current === (profile as UserProfile | undefined)?.user_id;
+        const isOwner = currentTeleprompterOwnerId === (profile as UserProfile | undefined)?.user_id;
 
         if (
             wasOwner !== isOwner &&
-            profile.user_id === presentation?.owner?.user_id
+            (profile as UserProfile | undefined)?.user_id === presentation?.owner?.user_id
         ) {
             previousOwnerIdRef.current = currentTeleprompterOwnerId;
             return;
         }
 
-        if (!wasOwner && isOwner && profile.user_id !== presentation?.owner?.user_id) {
+        if (!wasOwner && isOwner && (profile as UserProfile | undefined)?.user_id !== presentation?.owner?.user_id) {
             addSnackbar({text: "Вас тимчасово призначено власником виступу", mode: "timeout", timeout: 3200});
         } else if (wasOwner && !isOwner) {
             addSnackbar({text: "Ви більше не є власником виступу", mode: "timeout", timeout: 3200});
         }
         previousOwnerIdRef.current = currentTeleprompterOwnerId;
-    }, [currentTeleprompterOwnerId, profile?.user_id, addSnackbar, presentation?.owner?.user_id]);
+    }, [currentTeleprompterOwnerId, (profile as UserProfile | undefined)?.user_id, addSnackbar, presentation?.owner?.user_id]);
 
 
     const getPartAssigneeUserId = useCallback((partId: number): number | null => {
@@ -663,7 +665,7 @@ const TeleprompterPage: React.FC = () => {
     const isCurrentUserSpeakerOfCurrentPart = useMemo(() => {
         if (!profile || !currentHighlightedPartId) return false;
         const assigneeUserId = getPartAssigneeUserId(currentHighlightedPartId);
-        return assigneeUserId === profile.user_id;
+        return assigneeUserId === (profile as UserProfile | undefined)?.user_id;
     }, [profile, currentHighlightedPartId, getPartAssigneeUserId]);
 
     useEffect(() => {
@@ -729,8 +731,8 @@ const TeleprompterPage: React.FC = () => {
             const newPartId = currentHighlightedPartId;
 
             if (oldPartId && profile && newPartId !== null) {
-                const wasSpeakerOfOldPart = getPartAssigneeUserId(oldPartId) === profile.user_id;
-                const isSpeakerOfNewPart = getPartAssigneeUserId(newPartId) === profile.user_id;
+                const wasSpeakerOfOldPart = getPartAssigneeUserId(oldPartId) === (profile as UserProfile | undefined)?.user_id;
+                const isSpeakerOfNewPart = getPartAssigneeUserId(newPartId) === (profile as UserProfile | undefined)?.user_id;
 
                 if (wasSpeakerOfOldPart && !isSpeakerOfNewPart) {
                     console.log(`Part changed (useEffect) from ${oldPartId} (our part) to ${newPartId} (not our part). Stopping recognition.`);
@@ -969,7 +971,7 @@ const TeleprompterPage: React.FC = () => {
             lastPositionUpdateRef.current = Date.now();
 
             console.log(`RECEIVED: partId=${data.partId}, position=${data.position}`);
-            console.log(`CURRENT STATE: highlighted=${highlightedPartIdRef.current}, userID=${profileRef.current?.user_id}, recognition=${isRecognizingRef.current}`);
+            console.log(`CURRENT STATE: highlighted=${highlightedPartIdRef.current}, userID=${(profileRef.current as UserProfile | undefined)?.user_id}, recognition=${isRecognizingRef.current}`);
 
             const partExists = partsContentRef.current.some(p => p.part_id === data.partId);
             if (!partExists) {
@@ -996,10 +998,10 @@ const TeleprompterPage: React.FC = () => {
             newPartSpeaker = getPartAssigneeUserId(data.partId);
             console.log(`newPartSpeaker lookup: part=${data.partId}, speaker=${newPartSpeaker}`);
 
-            console.log(`SPEAKERS: oldSpeaker=${oldPartSpeaker}, newSpeaker=${newPartSpeaker}, currentUser=${profileRef.current?.user_id}`);
+            console.log(`SPEAKERS: oldSpeaker=${oldPartSpeaker}, newSpeaker=${newPartSpeaker}, currentUser=${(profileRef.current as UserProfile | undefined)?.user_id}`);
 
-            const isCurrentUserOldSpeaker = profileRef.current?.user_id === oldPartSpeaker;
-            const isCurrentUserNewSpeaker = profileRef.current?.user_id === newPartSpeaker;
+            const isCurrentUserOldSpeaker = (profileRef.current as UserProfile | undefined)?.user_id === oldPartSpeaker;
+            const isCurrentUserNewSpeaker = (profileRef.current as UserProfile | undefined)?.user_id === newPartSpeaker;
             console.log(`SPEAKER ROLES: isCurrentUserOldSpeaker=${isCurrentUserOldSpeaker}, isCurrentUserNewSpeaker=${isCurrentUserNewSpeaker}`);
             console.log(`RECOGNITION STATE: isRecognizing=${isRecognizingRef.current}, hasBeenAttempted=${recognitionStartAttemptedRef.current}`);
 
@@ -1030,9 +1032,9 @@ const TeleprompterPage: React.FC = () => {
                 setTimeout(() => {
                     const currentPart = highlightedPartIdRef.current;
                     const currentPartSpeakerId = currentPart ? getPartAssigneeUserId(currentPart) : null;
-                    const isUserSpeaker = profileRef.current?.user_id === currentPartSpeakerId;
+                    const isUserSpeaker = (profileRef.current as UserProfile | undefined)?.user_id === currentPartSpeakerId;
 
-                    console.log(`DELAYED CHECK: currentPart=${currentPart}, partSpeaker=${currentPartSpeakerId}, userID=${profileRef.current?.user_id}, isUserSpeaker=${isUserSpeaker}, isRecognizing=${isRecognizingRef.current}`);
+                    console.log(`DELAYED CHECK: currentPart=${currentPart}, partSpeaker=${currentPartSpeakerId}, userID=${(profileRef.current as UserProfile | undefined)?.user_id}, isUserSpeaker=${isUserSpeaker}, isRecognizing=${isRecognizingRef.current}`);
 
                     if (isUserSpeaker && currentPresentationStartDate && !isRecognizingRef.current) {
                         console.log(`STARTING RECOGNITION for new speaker part ${currentPart}`);
@@ -1263,14 +1265,14 @@ const TeleprompterPage: React.FC = () => {
     const {isRecording: isVideoRecording} = useTeleprompterVideoRecorder({
         enabled: delayedEnabled,
         isVideoRecordingAllowed,
-        isPremium: !!profile?.has_premium,
+        isPremium: !!(profile as UserProfile | undefined)?.has_premium,
         partId: currentHighlightedPartId || 0,
         presentationId,
         partName: currentHighlightedPartId ? sortedParts.find(p => p.part_id === currentHighlightedPartId)?.part_name ?? '' : '',
         partOrder: currentHighlightedPartId ? sortedParts.findIndex(p => p.part_id === currentHighlightedPartId) + 1 : 1,
         presentationStartDate: currentPresentationStartDate || "",
         onRecordingStopped: handleRecordingStopped,
-        maxRecordingSeconds: profile?.has_premium ? 0 : maxFreeSeconds,
+        maxRecordingSeconds: (profile as UserProfile | undefined)?.has_premium ? 0 : maxFreeSeconds,
         onAutoStoppedByDuration: () => setVideoAutoStoppedByDuration(true),
     });
 
@@ -1304,7 +1306,7 @@ const TeleprompterPage: React.FC = () => {
                     const currentPartSpeakerId = currentHighlightedPartId ?
                         getPartAssigneeUserId(currentHighlightedPartId) : null;
 
-                    if (currentPartSpeakerId && profile?.user_id && profile.user_id === currentPartSpeakerId) {
+                    if (currentPartSpeakerId && (profile as UserProfile | undefined)?.user_id && (profile as UserProfile).user_id === currentPartSpeakerId) {
                         console.log("Starting recognition after presentation start event (user is current speaker)");
                         initAndStartRecognition();
                     }
@@ -1674,7 +1676,7 @@ const TeleprompterPage: React.FC = () => {
 
         if (currentPresentationStartDate && highlightedPartIdRef.current) {
             const currentPartSpeakerId = getPartAssigneeUserId(highlightedPartIdRef.current);
-            const isUserSpeaker = currentPartSpeakerId === profile?.user_id;
+            const isUserSpeaker = currentPartSpeakerId === (profile as UserProfile | undefined)?.user_id;
 
             if (isUserSpeaker) {
                 console.log(`Initial load or data refresh: User is speaker of active part ${highlightedPartIdRef.current}, resetting recognition attempt flag`);
@@ -1691,7 +1693,7 @@ const TeleprompterPage: React.FC = () => {
             stopSpeechRecognition();
         }
     }, [activeData, sortedParts, partsContent, findWordIndexFromCharPosition, getPartAssigneeUserId,
-        updateHighlightAndScroll, profile?.user_id, stopSpeechRecognition, initAndStartRecognition]);
+        updateHighlightAndScroll, (profile as UserProfile | undefined)?.user_id, stopSpeechRecognition, initAndStartRecognition]);
 
     const handlePlayPauseClick = async () => {
         if (!presentationId || !isCurrentUserOwner) {
@@ -1740,7 +1742,6 @@ const TeleprompterPage: React.FC = () => {
             }
         };
     }, []);
-    ;
 
 
     if (!initialLoadComplete && (activeDataLoading || partsLoading)) {
@@ -1823,13 +1824,17 @@ const TeleprompterPage: React.FC = () => {
     if (!presentationId || !activeData || !parts) return <div className="teleprompter-error">Не вдалося завантажити
         дані.</div>;
 
+
     return (
         <div className="teleprompter-page">
+            <Title>
+                {`${presentation?.name ? `${presentation.name} | ` : ''}Виступ з телесуфлером – ScriptGlance`}
+            </Title>
             <ParticipantsHeader
                 pageType="teleprompter"
                 presentationName={presentation?.name}
                 participants={participants || []}
-                profile={profile || undefined}
+                profile={profile as UserProfile | undefined}
                 teleprompterActiveUsers={teleprompterActiveUsers}
                 teleprompterOwnerId={currentTeleprompterOwnerId}
                 onPlayPauseClick={isCurrentUserOwner ? handlePlayPauseClick : undefined}
@@ -1859,7 +1864,7 @@ const TeleprompterPage: React.FC = () => {
                         {partsContent.map((part) => {
                             const isCurrentPartActive = currentHighlightedPartId === part.part_id;
                             const partAssigneeUserId = getPartAssigneeUserId(part.part_id);
-                            const isUserAssignedToPart = partAssigneeUserId === profile?.user_id;
+                            const isUserAssignedToPart = partAssigneeUserId === (profile as UserProfile | undefined)?.user_id;
 
                             return (
                                 <div
@@ -1925,7 +1930,7 @@ const TeleprompterPage: React.FC = () => {
                         className={`teleprompter-footer-btn teleprompter-footer-video-button ${isVideoRecordingModeActive ? 'active' : ''}`}
                         title={
                             isVideoRecordingAllowed
-                                ? (profile?.has_premium ? "Вимкнути запис відео" : `Ви можете записати ще ${maxFreeVideoCount - myTotalVideoCount} відео`)
+                                ? ((profile as UserProfile | undefined)?.has_premium ? "Вимкнути запис відео" : `Ви можете записати ще ${maxFreeVideoCount - myTotalVideoCount} відео`)
                                 : "Досягнуто ліміту безкоштовних відео"
                         }
                         onClick={isVideoRecordingAllowed ? handleToggleRecordingMode : undefined}

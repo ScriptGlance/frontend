@@ -44,6 +44,8 @@ import ParticipantsHeader from "../../components/participantsHeader/Participants
 import StructureSidebar from "../../components/structureSidebar/StructureSidebar.tsx";
 import {useActiveTeleprompterData} from "../../hooks/useTeleprompterPresentation.ts";
 import {Role} from "../../types/role.ts";
+import {UserProfile} from "../../api/repositories/profileRepository.ts";
+import {Title} from "react-head";
 
 export interface PendingTextOp {
     operations: OperationComponent[];
@@ -198,12 +200,12 @@ const PresentationTextEditorPage: React.FC = () => {
     }, [Object.keys(partsState).join(",")]);
 
     useEffect(() => {
-        if (profile?.user_id) {
+        if ((profile as UserProfile | undefined)?.user_id) {
             const now = Date.now();
             setActiveUsers(prev => [
-                ...prev.filter(u => u.user_id !== profile.user_id),
+                ...prev.filter(u => u.user_id !== (profile as UserProfile).user_id),
                 {
-                    user_id: profile.user_id,
+                    user_id: (profile as UserProfile).user_id,
                     part_id: 0,
                     cursor_position: null,
                     selection_anchor_position: null,
@@ -212,7 +214,7 @@ const PresentationTextEditorPage: React.FC = () => {
                 }
             ]);
         }
-    }, [profile?.user_id]);
+    }, [profile]);
 
     useEffect(() => {
         const container = document.querySelector('.parts-editor');
@@ -589,7 +591,7 @@ const PresentationTextEditorPage: React.FC = () => {
 
         if (safeNewText === safeLastText) return;
 
-        const ops = createOps(safeLastText, safeNewText, profileRef.current?.user_id || 0);
+        const ops = createOps(safeLastText, safeNewText, (profileRef.current as UserProfile | undefined)?.user_id || 0);
         if (ops.length === 0) return;
 
         sendTextOperations({
@@ -651,11 +653,11 @@ const PresentationTextEditorPage: React.FC = () => {
 
         const currentPartStateFromRef = partsStateRef.current[partId];
         if (!currentPartStateFromRef) {
-            console.warn(`[OT][${remoteUserId === profileRef.current?.user_id ? 'ACK' : 'RemoteOp'}] Part ${partId} not found in local state. Skipping.`);
+            console.warn(`[OT][${remoteUserId === (profileRef.current as UserProfile | undefined)?.user_id ? 'ACK' : 'RemoteOp'}] Part ${partId} not found in local state. Skipping.`);
             return;
         }
 
-        const isOwnOp = remoteUserId === profileRef.current?.user_id && remoteSocketId === getSocketId();
+        const isOwnOp = remoteUserId === (profileRef.current as UserProfile | undefined)?.user_id && remoteSocketId === getSocketId();
         const logPrefix = `[OT][${isOwnOp ? `ACK_for_u${remoteUserId}` : `RemoteOp_from_u${remoteUserId}`}] PartID ${partId}, Target ${target}:`;
 
         let selectionBeforeAnyStateUpdate: { start: number, end: number } | null = null;
@@ -1376,12 +1378,15 @@ const PresentationTextEditorPage: React.FC = () => {
 
     return (
         <div className="presentation-text-editor">
+            <Title>
+                {`${presentation?.name ? `${presentation.name} | ` : ''}Редагування тексту – ScriptGlance`}
+            </Title>
             <ParticipantsHeader
                 pageType='editor'
                 presentationName={presentationName}
                 participants={participants}
                 editorActiveUsers={activeUsers}
-                profile={profile ?? undefined}
+                profile={profile as UserProfile | undefined}
                 onBack={handleBack}
             />
 
@@ -1512,7 +1517,7 @@ const PresentationTextEditorPage: React.FC = () => {
                                                                 activeUsers={activeUsers}
                                                                 participantColors={participantColors}
                                                                 participants={participants}
-                                                                currentUserId={profile?.user_id}
+                                                                currentUserId={(profile as UserProfile | undefined)?.user_id}
                                                                 onEditStart={() => handleNameEditStart(partId)}
                                                                 onTextChange={(e) => handleNameChange(e, partId)}
                                                                 onSave={() => handleNameSave(partId)}
@@ -1617,7 +1622,7 @@ const PresentationTextEditorPage: React.FC = () => {
                                                             activeUsers={activeUsers}
                                                             participantColors={participantColors}
                                                             participants={participants || []}
-                                                            currentUserId={profile?.user_id}
+                                                            currentUserId={(profile as UserProfile | undefined)?.user_id}
                                                             textAreaRef={(ref) => textAreaRefs.current[partId] = ref}
                                                             onTextChange={(e) => handleTextChange(e as React.ChangeEvent<HTMLTextAreaElement>, partId)}
                                                             onSelectionChange={(e) => {

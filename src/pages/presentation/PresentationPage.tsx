@@ -32,6 +32,8 @@ import VideoModal from "../../components/modals/video/VideoModal.tsx";
 import BuySubscriptionModal from "../../components/modals/buySubscription/BuySubscriptionModal.tsx";
 import Logo from "../../components/logo/Logo.tsx";
 import {truncateText} from "../../utils/textUtils.ts";
+import {UserProfile} from "../../api/repositories/profileRepository.ts";
+import {Title} from "react-head";
 
 const PresentationPage = () => {
 
@@ -194,7 +196,7 @@ const PresentationPage = () => {
             if (profile &&
                 participants &&
                 presentationsConfig &&
-                !profile.has_premium &&
+                !(profile as UserProfile).has_premium &&
                 participants.length >= presentationsConfig.premium_config.max_free_participants_count) {
                 setPremiumModalOpen(true);
                 return;
@@ -245,7 +247,7 @@ const PresentationPage = () => {
     };
 
     const handleMontageClick = () => {
-        if (profile?.has_premium) {
+        if ((profile as UserProfile | undefined)?.has_premium) {
             navigate(`/presentation/${presentationId}/montage`);
         } else {
             setPremiumModalOpen(true);
@@ -278,13 +280,16 @@ const PresentationPage = () => {
         return <div className="error-container-presentation">Презентацію не знайдено</div>;
     }
 
-    const isOwner = presentation.owner.user_id === profile?.user_id;
+    const isOwner = presentation.owner.user_id === (profile as UserProfile | undefined)?.user_id;
     const isGroup = (participants?.length ?? 1) > 1;
 
     return (
         <div className="presentation-page-main">
+            <Title>
+                {`${presentation?.name ? `${presentation.name} | ` : ''}Виступ – ScriptGlance`}
+            </Title>
             <div className="presentation-header-presentation">
-                <Logo onClick={handleLogoClick} premium={profile?.has_premium}/>
+                <Logo onClick={handleLogoClick} premium={(profile as UserProfile | undefined)?.has_premium}/>
                 <RightHeaderButtons onLogout={handleLogout}/>
             </div>
             <div className="presentation-title-container-presentation">
@@ -540,6 +545,7 @@ const PresentationPage = () => {
                 confirmationInputValue={presentation?.name}
                 cancelButtonText="Скасувати"
                 confirmButtonText="Так, видалити"
+                reloadAfterDelete={false}
             />
             <VideoModal
                 open={videoModalOpen}
