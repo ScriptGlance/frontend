@@ -702,7 +702,7 @@ const ModeratorChatPage: React.FC = () => {
                         {chatsLoading && chatsForCurrentTab.length === 0 && (
                             <div className="chats-loading">Завантаження...</div>
                         )}
-                        {!chatsLoading && chatsForCurrentTab.length === 0 && hasTriedLoading && (
+                        {!chatsLoading && chatsForCurrentTab.length === 0 && (
                             <div className="chats-empty-hint">Чатів не знайдено</div>
                         )}
                         {chatsForCurrentTab.length > 0 && (
