@@ -9,12 +9,12 @@ import videoOnIcon from "../../assets/video-on-icon.svg";
 import videoOffIcon from "../../assets/video-off-icon.svg";
 
 import { Participant, PresentationActiveJoinedUser } from "../../api/repositories/presentationsRepository.ts";
-import { UserProfile } from "../../api/repositories/userRepository.ts";
 import { ActiveUser } from "../../pages/presentationEditText/PresentationTextEditorPage.tsx";
 
 import { Avatar } from "../avatar/Avatar.tsx";
 import Logo from "../logo/Logo.tsx";
 import './ParticipantsHeader.css';
+import {UserProfile} from "../../api/repositories/profileRepository.ts";
 
 const formatTime = (totalSeconds: number): string => {
     const hours = Math.floor(totalSeconds / 3600);

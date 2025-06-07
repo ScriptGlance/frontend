@@ -21,6 +21,7 @@ import {usePresentationGlobalActions} from "../../hooks/usePresentationActions.t
 import Logo from "../../components/logo/Logo.tsx";
 import {Role} from "../../types/role.ts";
 import {UserProfile} from "../../api/repositories/profileRepository.ts";
+import {Title} from "react-head";
 
 
 export const UserDashboardPage = () => {
@@ -151,6 +152,7 @@ export const UserDashboardPage = () => {
 
     return (
         <div className="dashboard-layout">
+            <Title>Мої виступи – ScriptGlance</Title>
             <header className="dashboard-header">
                 <div className="welcome-section">
                     <Logo premium={(currentUser as UserProfile | undefined)?.has_premium} />

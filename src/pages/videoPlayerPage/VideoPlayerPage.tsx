@@ -4,6 +4,7 @@ import CustomVideoPlayer from "../../components/customVideoPlayer/CustomVideoPla
 import {useSharedVideo} from "../../hooks/usePresentationVideo.ts";
 import "./VideoPlayerPage.css";
 import NotFound from "../notFound/NotFound.tsx";
+import {Title} from "react-head";
 
 const VideoPlayerPage: React.FC = () => {
     const {shareCode} = useParams<{ shareCode: string }>();
@@ -28,6 +29,7 @@ const VideoPlayerPage: React.FC = () => {
 
     return (
         <div className="video-player-fullscreen">
+            <Title>Записане відео – ScriptGlance</Title>
             {loading ? (
                 <div className="video-player-status">
                     <span>Завантаження відео...</span>

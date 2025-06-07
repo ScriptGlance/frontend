@@ -23,6 +23,7 @@ import "./ModeratorChatPage.css";
 import {NewMessageEvent} from "../../api/socket/chatSocketManager.ts";
 import {useProfile} from "../../hooks/ProfileContext.tsx";
 import {ModeratorProfile} from "../../api/repositories/profileRepository.ts";
+import {Title} from "react-head";
 
 type ChatTab = "my" | "general" | "history";
 
@@ -659,6 +660,7 @@ const ModeratorChatPage: React.FC = () => {
 
     return (
         <div className="chats-main-container">
+            <Title>Сторінка модератора – ScriptGlance</Title>
             <div className="chats-header-bar">
                 <Logo role={Role.Moderator} />
                 <RightHeaderButtons role={Role.Moderator} onLogout={handleLogout} />
