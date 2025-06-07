@@ -115,6 +115,10 @@ const PresentationPage = () => {
 
     const structureScrollRef = useRef<HTMLDivElement>(null);
 
+    const [deleteParticipantModalOpen, setDeleteParticipantModalOpen] = useState(false);
+    const [participantToDelete, setParticipantToDelete] = useState<number | null>(null);
+    const [participantToDeleteName, setParticipantToDeleteName] = useState<string>("");
+
 
     const structureParts = structure?.structure?.filter((part) => part.text_preview.trim()) ?? [];
 
@@ -219,11 +223,13 @@ const PresentationPage = () => {
         setEditModalOpen(false);
     };
 
-
-    const handleDeleteParticipant = async (participantId: number) => {
-        await deleteParticipant(participantId);
-        refetchParticipants();
-
+    const handleConfirmDeleteParticipant = async () => {
+        if (participantToDelete) {
+            await deleteParticipant(participantToDelete);
+            setParticipantToDelete(null);
+            setDeleteParticipantModalOpen(false);
+            refetchParticipants();
+        }
     };
 
     const handleDeletePresentation = () => {
@@ -236,6 +242,7 @@ const PresentationPage = () => {
             navigate("/dashboard");
         }
     };
+
 
     const handleLogoClick = () => {
         navigate("/dashboard");
@@ -377,7 +384,11 @@ const PresentationPage = () => {
                                                 <button
                                                     className="participant-remove-btn-presentation"
                                                     title="Видалити учасника"
-                                                    onClick={() => handleDeleteParticipant(participant.participant_id)}
+                                                    onClick={() => {
+                                                        setParticipantToDelete(participant.participant_id);
+                                                        setParticipantToDeleteName(`${participant.user.first_name} ${participant.user.last_name}`);
+                                                        setDeleteParticipantModalOpen(true);
+                                                    }}
                                                 >
                                                     <img src={crossIcon}/>
                                                 </button>
@@ -547,6 +558,18 @@ const PresentationPage = () => {
                 confirmButtonText="Так, видалити"
                 reloadAfterDelete={false}
             />
+
+            <DeleteConfirmationModal
+                open={deleteParticipantModalOpen}
+                onClose={() => {
+                    setDeleteParticipantModalOpen(false);
+                    setParticipantToDelete(null);
+                }}
+                onConfirm={handleConfirmDeleteParticipant}
+                confirmationTitle={`Ви впевнені, що хочете видалити учасника ${participantToDeleteName}?`}
+                reloadAfterDelete={false}
+            />
+
             <VideoModal
                 open={videoModalOpen}
                 onClose={() => setVideoModalOpen(false)}
