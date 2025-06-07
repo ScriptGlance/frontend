@@ -62,8 +62,6 @@ const ModeratorChatPage: React.FC = () => {
     const [sending, setSending] = useState(false);
     const [searchValue, setSearchValue] = useState("");
     const [closeChatModalOpen, setCloseChatModalOpen] = useState(false);
-    const [hasTriedLoading, setHasTriedLoading] = useState(false);
-
     const chatRestoredRef = useRef(false);
     const scrollToBottomRef = useRef(false);
 
@@ -175,13 +173,6 @@ const ModeratorChatPage: React.FC = () => {
     useEffect(() => {
         localStorage.setItem(SELECTED_TAB_KEY, selectedTab);
     }, [selectedTab]);
-
-    useEffect(() => {
-        setHasTriedLoading(false);
-    }, [selectedTab, searchValue]);
-    useEffect(() => {
-        if (!chatsLoading) setHasTriedLoading(true);
-    }, [chatsLoading]);
 
     useEffect(() => {
         if (
