@@ -32,6 +32,7 @@ export interface ModeratorChatListItem {
     last_message_sent_date: string;
     unread_messages_count: number;
     avatar?: string;
+    assigned_moderator_id: number | null
 }
 
 export interface ModeratorChatsResponse {
