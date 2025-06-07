@@ -37,8 +37,7 @@ export function useVideoUploadQueue(token: string) {
         while (cursor) {
             const chunk = cursor.value as VideoChunk;
             if (!metaByVideoId[chunk.videoId]) {
-                const { videoId, presentationId, partId, partName, partOrder, presentationStartDate, startedAt } = chunk;
-                metaByVideoId[videoId] = { videoId, presentationId, partId, partName, partOrder, presentationStartDate, startedAt };
+                metaByVideoId[chunk.videoId] = chunk;
             }
             cursor = await cursor.continue();
         }
@@ -92,7 +91,8 @@ export function useVideoUploadQueue(token: string) {
                 file,
                 uploading.meta.partName,
                 uploading.meta.partOrder,
-                uploading.meta.startedAt
+                uploading.meta.startedAt,
+                uploading.meta.presentationStartId
             );
 
             setQueue(q =>

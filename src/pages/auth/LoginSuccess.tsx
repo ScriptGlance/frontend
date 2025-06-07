@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { jwtDecode } from 'jwt-decode';
 import { Role } from '../../types/role';
+import {Title} from "react-head";
 
 type JWTPayload = { role?: string };
 
@@ -53,6 +54,7 @@ export const LoginSuccess = () => {
 
   return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <Title>Завантаження – ScriptGlance</Title>
         <p>Завантаження…</p>
       </div>
   );

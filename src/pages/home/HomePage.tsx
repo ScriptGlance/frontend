@@ -12,6 +12,7 @@ import {
 import { JSX } from "react";
 import { useNavigate } from "react-router-dom";
 import {APK_URL} from "../../contstants.ts";
+import {Title} from "react-head";
 
 export const HomePage = (): JSX.Element => {
   const navigate = useNavigate();
@@ -22,6 +23,7 @@ export const HomePage = (): JSX.Element => {
 
   return (
     <div className="home-page">
+      <Title>Головна – ScriptGlance</Title>
       <header className="header">
         <img className="logo" alt="Logo" src={logo} />
         <div className="auth-buttons">

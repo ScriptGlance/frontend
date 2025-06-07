@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import presentationsRepository from "../api/repositories/presentationsRepository";
+import presentationsRepository, {StartVideoRecordingResponse} from "../api/repositories/presentationsRepository";
 import { useAuth } from "./useAuth";
 import { Role } from "../types/role";
 
@@ -89,5 +89,36 @@ export function useSharedVideo(shareCode: string | null) {
         error,
         fetchSharedVideo,
         cleanupVideoUrl
+    };
+}
+
+export function useStartVideoRecording() {
+    const { getToken } = useAuth();
+    const [startSession, setStartSession] = useState<StartVideoRecordingResponse | null>(null);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    const startRecording = useCallback(async (presentationId: number) => {
+        setLoading(true);
+        setError(null);
+        try {
+            const token = getToken(Role.User);
+            if (!token) throw new Error("Not authenticated");
+            const response = await presentationsRepository.startVideoRecording(token, presentationId);
+            setStartSession(response);
+            return response;
+        } catch (e: any) {
+            setError("Не вдалося почати запис");
+            return null;
+        } finally {
+            setLoading(false);
+        }
+    }, [getToken]);
+
+    return {
+        startSession,
+        loading,
+        error,
+        startRecording,
     };
 }

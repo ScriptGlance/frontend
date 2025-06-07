@@ -3,12 +3,14 @@ import logo from "../../assets/logo.png";
 import "./ForgotPasswordPage.css";
 import checkmark from "../../assets/check-mark-icon.svg";
 import arrowBack from "../../assets/arrow-back-icon.svg";
+import {Title} from "react-head";
 
 export const ResetEmailSentPage = () => {
     const navigate = useNavigate();
 
     return (
         <div className="forgot-password-page">
+            <Title>Забули пароль – ScriptGlance</Title>
             <header className="header">
                 <img
                     src={logo}
