@@ -26,6 +26,7 @@ import Chart from 'chart.js/auto';
 import { ChartOptions, TooltipItem } from "chart.js";
 import {UpdateModeratorProfileRequest, UpdateUserProfileRequest} from "../../api/repositories/adminRepository.ts";
 import AdminInvite from "../../components/modals/adminInvite/AdminInvite.tsx";
+import { Title } from 'react-head';
 
 const ITEMS_PER_PAGE = 20;
 
@@ -606,6 +607,7 @@ export const AdminDashboardPage = () => {
 
     return (
         <div className="admin-dashboard-container">
+            <Title>Сторінка адміністратора – ScriptGlance</Title>
             <header className="admin-header">
                 <div className="admin-header-left">
                     <Logo role={Role.Admin} />

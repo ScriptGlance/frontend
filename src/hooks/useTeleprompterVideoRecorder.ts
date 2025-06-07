@@ -2,6 +2,7 @@ import {useEffect, useRef, useState} from "react";
 import {openDB} from "idb";
 import logoImage from '../assets/logo.png';
 import {VideoChunk} from "../api/repositories/videoStorageRepository.ts";
+import {useStartVideoRecording} from "./usePresentationVideo.ts";
 
 function generateVideoId(presentationId: number, partId: number, presentationStartDate: string) {
     return `${presentationId}_${partId}_${presentationStartDate}`;
@@ -18,7 +19,8 @@ export function useTeleprompterVideoRecorder({
                                                  maxRecordingSeconds,
                                                  onRecordingStopped,
                                                  onAutoStoppedByDuration,
-                                                 isVideoRecordingAllowed
+                                                 isVideoRecordingAllowed,
+                                                 onError
                                              }: {
     enabled: boolean;
     isPremium: boolean;
@@ -31,6 +33,7 @@ export function useTeleprompterVideoRecorder({
     onRecordingStopped?: () => void;
     onAutoStoppedByDuration: () => void;
     isVideoRecordingAllowed: boolean;
+    onError: () => void;
 }) {
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const streamRef = useRef<MediaStream | null>(null);
@@ -43,6 +46,8 @@ export function useTeleprompterVideoRecorder({
 
     const isStoppingRef = useRef(false);
     const recordingStartedRef = useRef(false);
+
+    const {startRecording} = useStartVideoRecording();
 
     useEffect(() => {
         partIdRef.current = partId;
@@ -132,7 +137,14 @@ export function useTeleprompterVideoRecorder({
             });
         }
 
-        async function startRecording() {
+        async function startRecordingWithPresentationId() {
+            const session = await startRecording(presentationId);
+            if (!session) {
+                onError();
+                return;
+            }
+            const {presentation_start_id: presentationStartId} = session;
+
             if (isStoppingRef.current) {
                 console.warn('[VIDEO_RECORDER] startRecording called but stop in progress!');
                 await new Promise(resolve => {
@@ -281,6 +293,7 @@ export function useTeleprompterVideoRecorder({
                         partOrder,
                         presentationStartDate,
                         startedAt: startedAtRef.current!,
+                        presentationStartId,
                         chunkOrder,
                         isFirstChunk: chunkOrder === 0,
                         data: arrBuf,
@@ -326,7 +339,7 @@ export function useTeleprompterVideoRecorder({
             if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
                 mediaRecorderRef.current.stop();
             } else {
-                startRecording();
+                startRecordingWithPresentationId();
             }
         }
 

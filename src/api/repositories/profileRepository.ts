@@ -66,6 +66,7 @@ export interface ModeratorProfile {
     last_name: string;
     email: string;
     joined_at: string;
+    is_temporary_password: boolean;
 }
 export type ModeratorProfileUpdateData = ProfileUpdateData;
 

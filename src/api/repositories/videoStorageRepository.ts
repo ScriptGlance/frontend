@@ -8,6 +8,7 @@ export interface VideoChunk {
     partOrder: number;
     startedAt: number;
     presentationStartDate: string;
+    presentationStartId: number;
     chunkOrder: number;
     isFirstChunk: boolean;
     data: ArrayBuffer;

@@ -58,6 +58,7 @@ import {SnackbarProps} from "../../components/snackbar/Snackbar.tsx";
 import {PUNCTUATION_REGEX} from "../../contstants.ts";
 import {Role} from "../../types/role.ts";
 import {UserProfile} from "../../api/repositories/profileRepository.ts";
+import {Title} from "react-head";
 
 interface CustomSpeechRecognition extends SpeechRecognition {
     continuous: boolean;
@@ -184,7 +185,9 @@ const TeleprompterPage: React.FC = () => {
     const lastSentFinalPositionRef = useRef<{ [partId: number]: boolean }>({});
     const [isVideoAutoStoppedByDuration, setVideoAutoStoppedByDuration] = useState(false);
 
+
     const [localStructure, setLocalStructure] = useState(activeData?.structure || []);
+    const localStructureRef = useRef(localStructure);
 
     useEffect(() => {
         setLocalStructure(activeData?.structure || []);
@@ -332,6 +335,8 @@ const TeleprompterPage: React.FC = () => {
     useEffect(() => {
         readingConfirmationActiveRef.current = readingConfirmationActive;
     }, [readingConfirmationActive]);
+
+    useEffect(() => { localStructureRef.current = localStructure; }, [localStructure]);
 
 
     const [currentSpeakerUserId, setCurrentSpeakerUserId] = useState<number | null>(null);
@@ -946,6 +951,16 @@ const TeleprompterPage: React.FC = () => {
             setTeleprompterActiveUsers(prev => {
                 const existingUser = prev.find(u => u.userId === data.user_id);
                 if (data.type === PresenceEventType.UserJoined) {
+                    const highlightedPartId = highlightedPartIdRef.current;
+                    console.log("Highlighted part id", highlightedPartId);
+                    if (highlightedPartId) {
+                        const assigneeUserId = localStructureRef.current.find(p => p.partId === highlightedPartId)?.assigneeUserId;
+                        console.log("Assignee user id", assigneeUserId, data.user_id);
+                        if (assigneeUserId === data.user_id) {
+                            removeSnackbar(WAITING_FOR_USER_SNACKBAR_KEY);
+                        }
+                    }
+
                     return existingUser ? prev.map(u => u.userId === data.user_id ? {...u} : u)
                         : [...prev, {userId: data.user_id, isRecordingModeActive: false}];
                 }
@@ -1273,6 +1288,13 @@ const TeleprompterPage: React.FC = () => {
         onRecordingStopped: handleRecordingStopped,
         maxRecordingSeconds: (profile as UserProfile | undefined)?.has_premium ? 0 : maxFreeSeconds,
         onAutoStoppedByDuration: () => setVideoAutoStoppedByDuration(true),
+        onError: () => {
+            addSnackbar({
+                text: "Не вдалося розпочати запис відео",
+                mode: "timeout",
+                timeout: 4500,
+            });
+        }
     });
 
     useEffect(() => {
@@ -1741,7 +1763,6 @@ const TeleprompterPage: React.FC = () => {
             }
         };
     }, []);
-    ;
 
 
     if (!initialLoadComplete && (activeDataLoading || partsLoading)) {
@@ -1824,8 +1845,12 @@ const TeleprompterPage: React.FC = () => {
     if (!presentationId || !activeData || !parts) return <div className="teleprompter-error">Не вдалося завантажити
         дані.</div>;
 
+
     return (
         <div className="teleprompter-page">
+            <Title>
+                {`${presentation?.name ? `${presentation.name} | ` : ''}Виступ з телесуфлером – ScriptGlance`}
+            </Title>
             <ParticipantsHeader
                 pageType="teleprompter"
                 presentationName={presentation?.name}

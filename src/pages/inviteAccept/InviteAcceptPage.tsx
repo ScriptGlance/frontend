@@ -5,6 +5,7 @@ import { GreenButton } from "../../components/appButton/AppButton";
 import { useAuth } from "../../hooks/useAuth";
 import './InviteAcceptPage.css';
 import { Role } from "../../types/role.ts";
+import {Title} from "react-head";
 
 const InviteAcceptPage: React.FC = () => {
     const { code } = useParams<{ code: string }>();
@@ -29,6 +30,7 @@ const InviteAcceptPage: React.FC = () => {
 
     return (
         <div className="invite-accept-page">
+            <Title>Запрошення – ScriptGlance</Title>
             <div className="invite-accept-card">
                 <div className="invite-accept-title">Запрошення до виступу</div>
                 {acceptLoading && (

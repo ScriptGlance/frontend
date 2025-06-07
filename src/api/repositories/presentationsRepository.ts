@@ -148,6 +148,11 @@ export interface ShareLinkResponse {
     shareCode: string;
 }
 
+export interface StartVideoRecordingResponse {
+    presentation_start_id: number;
+    current_timestamp: number;
+}
+
 class PresentationsRepository {
     private static instance: PresentationsRepository;
 
@@ -315,19 +320,29 @@ class PresentationsRepository {
         });
     }
 
+    public async startVideoRecording(token: string, presentationId: number): Promise<StartVideoRecordingResponse> {
+        const res = await apiClient.post(`/presentations/${presentationId}/start-recording`, {}, {
+            headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.error) throw new Error(res.description || "Failed to start video recording");
+        return res.data as StartVideoRecordingResponse;
+    }
+
     public async uploadVideo(
         token: string,
         presentationId: number,
         file: Blob | File,
         partName: string,
         partOrder: number,
-        startTimestamp: number
+        startTimestamp: number,
+        presentationStartId: number,
     ): Promise<{ video_id: number }> {
         const formData = new FormData();
         formData.append("file", file, "video.webm");
         formData.append("partName", partName);
         formData.append("partOrder", String(partOrder));
         formData.append("startTimestamp", String(startTimestamp));
+        formData.append("presentationStartId", String(presentationStartId));
 
         const response = await apiClient.post(
             `/presentations/${presentationId}/videos`,

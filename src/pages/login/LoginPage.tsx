@@ -8,6 +8,7 @@ import {useAuth} from "../../hooks/useAuth.ts";
 import {Role} from "../../types/role.ts"
 import ErrorModal from "../../components/modals/error/ErrorModal.tsx";
 import {SocialAuthButtons} from "../../components/socialAuthButtons/SocialAuthButtons";
+import {Title} from "react-head";
 
 interface LoginPageProps {
     role: Role;
@@ -24,7 +25,17 @@ export const LoginPage: React.FC<LoginPageProps> = ({role}) => {
         e.preventDefault();
         const success = await login({email, password, role});
         if (success) {
-            navigate('/dashboard');
+            switch (role) {
+                case Role.Moderator:
+                    navigate("/moderator/dashboard");
+                    break;
+                case Role.Admin:
+                    navigate("/admin/dasboard");
+                    break;
+                default:
+                    navigate("/dashboard");
+                    break;
+            }
         } else {
             setShowErrorModal(true);
         }
@@ -68,6 +79,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({role}) => {
 
     return (
         <div className="login-page">
+            <Title>Вхід – ScriptGlance</Title>
             <header className="header">
                 <img
                     src={logo}
