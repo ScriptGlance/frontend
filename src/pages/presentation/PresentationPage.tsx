@@ -33,6 +33,7 @@ import BuySubscriptionModal from "../../components/modals/buySubscription/BuySub
 import Logo from "../../components/logo/Logo.tsx";
 import {truncateText} from "../../utils/textUtils.ts";
 import {UserProfile} from "../../api/repositories/profileRepository.ts";
+import {Title} from "react-head";
 
 const PresentationPage = () => {
 
@@ -113,6 +114,10 @@ const PresentationPage = () => {
     const [premiumModalOpen, setPremiumModalOpen] = useState(false);
 
     const structureScrollRef = useRef<HTMLDivElement>(null);
+
+    const [deleteParticipantModalOpen, setDeleteParticipantModalOpen] = useState(false);
+    const [participantToDelete, setParticipantToDelete] = useState<number | null>(null);
+    const [participantToDeleteName, setParticipantToDeleteName] = useState<string>("");
 
 
     const structureParts = structure?.structure?.filter((part) => part.text_preview.trim()) ?? [];
@@ -218,11 +223,13 @@ const PresentationPage = () => {
         setEditModalOpen(false);
     };
 
-
-    const handleDeleteParticipant = async (participantId: number) => {
-        await deleteParticipant(participantId);
-        refetchParticipants();
-
+    const handleConfirmDeleteParticipant = async () => {
+        if (participantToDelete) {
+            await deleteParticipant(participantToDelete);
+            setParticipantToDelete(null);
+            setDeleteParticipantModalOpen(false);
+            refetchParticipants();
+        }
     };
 
     const handleDeletePresentation = () => {
@@ -235,6 +242,7 @@ const PresentationPage = () => {
             navigate("/dashboard");
         }
     };
+
 
     const handleLogoClick = () => {
         navigate("/dashboard");
@@ -284,6 +292,9 @@ const PresentationPage = () => {
 
     return (
         <div className="presentation-page-main">
+            <Title>
+                {`${presentation?.name ? `${presentation.name} | ` : ''}Виступ – ScriptGlance`}
+            </Title>
             <div className="presentation-header-presentation">
                 <Logo onClick={handleLogoClick} premium={(profile as UserProfile | undefined)?.has_premium}/>
                 <RightHeaderButtons onLogout={handleLogout}/>
@@ -373,7 +384,11 @@ const PresentationPage = () => {
                                                 <button
                                                     className="participant-remove-btn-presentation"
                                                     title="Видалити учасника"
-                                                    onClick={() => handleDeleteParticipant(participant.participant_id)}
+                                                    onClick={() => {
+                                                        setParticipantToDelete(participant.participant_id);
+                                                        setParticipantToDeleteName(`${participant.user.first_name} ${participant.user.last_name}`);
+                                                        setDeleteParticipantModalOpen(true);
+                                                    }}
                                                 >
                                                     <img src={crossIcon}/>
                                                 </button>
@@ -543,6 +558,18 @@ const PresentationPage = () => {
                 confirmButtonText="Так, видалити"
                 reloadAfterDelete={false}
             />
+
+            <DeleteConfirmationModal
+                open={deleteParticipantModalOpen}
+                onClose={() => {
+                    setDeleteParticipantModalOpen(false);
+                    setParticipantToDelete(null);
+                }}
+                onConfirm={handleConfirmDeleteParticipant}
+                confirmationTitle={`Ви впевнені, що хочете видалити учасника ${participantToDeleteName}?`}
+                reloadAfterDelete={false}
+            />
+
             <VideoModal
                 open={videoModalOpen}
                 onClose={() => setVideoModalOpen(false)}

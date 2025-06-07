@@ -21,6 +21,8 @@ import {usePresentationGlobalActions} from "../../hooks/usePresentationActions.t
 import Logo from "../../components/logo/Logo.tsx";
 import {Role} from "../../types/role.ts";
 import {UserProfile} from "../../api/repositories/profileRepository.ts";
+import {Title} from "react-head";
+import ChangePasswordModal from "../../components/modals/changePasswordModal/ChangePasswordModal.tsx";
 
 
 export const UserDashboardPage = () => {
@@ -63,7 +65,7 @@ export const UserDashboardPage = () => {
         }
     };
 
-    const {profile: currentUser, loading: profileLoading, error: profileError} = useProfile(Role.User);
+    const {profile: currentUser, loading: profileLoading, error: profileError, updateProfile} = useProfile(Role.User);
 
     const queryParams = useMemo(() => ({
         type: selectedType,
@@ -76,6 +78,9 @@ export const UserDashboardPage = () => {
     }), [selectedType, selectedDate, selectedOwner, search, sort, offset]);
 
     const {stats, presentations: fetchedPresentations, loading, error} = useDashboardData(queryParams);
+
+    const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
+
 
     useEffect(() => {
         setOffset(0);
@@ -149,8 +154,20 @@ export const UserDashboardPage = () => {
         );
     }, [currentUser]);
 
+    useEffect(() => {
+        if (currentUser?.is_temporary_password) {
+            setShowChangePasswordModal(true);
+        }
+    }, [currentUser]);
+
+    const handleChangePassword = async ({ password }: { password: string }) => {
+        await updateProfile({ password });
+        setShowChangePasswordModal(false);
+    };
+
     return (
         <div className="dashboard-layout">
+            <Title>Мої виступи – ScriptGlance</Title>
             <header className="dashboard-header">
                 <div className="welcome-section">
                     <Logo premium={(currentUser as UserProfile | undefined)?.has_premium} />
@@ -430,6 +447,13 @@ export const UserDashboardPage = () => {
                     </section>
                 </div>
             </main>
+
+            <ChangePasswordModal
+                open={showChangePasswordModal}
+                onSave={handleChangePassword}
+                onClose={() => setShowChangePasswordModal(false)}
+                loading={false}
+            />
 
             <ErrorModal
                 show={showErrorModal}

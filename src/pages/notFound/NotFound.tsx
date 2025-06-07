@@ -3,12 +3,14 @@ import { useNavigate } from "react-router-dom";
 import logo from "../../assets/logo.png";
 import "./NotFound.css";
 import {GreenButton} from "../../components/appButton/AppButton.tsx";
+import {Title} from "react-head";
 
 export default function NotFound() {
   const navigate = useNavigate();
 
   return (
     <div className="not-found-page">
+      <Title>Сторінка недоступна – ScriptGlance</Title>
       <header className="header">
         <img
           src={logo}
