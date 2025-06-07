@@ -118,7 +118,7 @@ const PresentationTextEditorPage: React.FC = () => {
 
     const {presentation, refetch: refetchPresentation} = usePresentationDetails(presentationId);
     const {parts, loading: partsLoading} = usePresentationParts(presentationId);
-    const {participants} = usePresentationParticipants(presentationId);
+    const {participants, refetch: refetchParticipants} = usePresentationParticipants(presentationId);
     const {updatePart} = useUpdatePresentationPart();
     const {createPart} = useCreatePresentationPart(presentationId);
     const {deletePart} = useDeletePresentationPart();
@@ -339,8 +339,42 @@ const PresentationTextEditorPage: React.FC = () => {
             setPresentationStarted(true)
         } else if (event.event_type === PresentationEventType.PresentationStopped) {
             setPresentationStarted(false);
+        } else if (event.event_type === PresentationEventType.ParticipantsChanged) {
+            refetchParticipants();
         }
     });
+
+    useEffect(() => {
+        if (!participants || Object.keys(partsState).length === 0) return;
+
+        const ownerParticipant = participants.find(p => p.user.user_id === presentation?.owner?.user_id);
+        if (!ownerParticipant) return;
+        const ownerParticipantId = ownerParticipant.participant_id;
+
+        const participantIds = participants.map(p => p.participant_id);
+
+        let hasChanges = false;
+
+        const newPartsState = { ...partsState };
+        Object.entries(partsState).forEach(([partIdStr, partState]) => {
+            const partId = parseInt(partIdStr);
+            if (
+                partState.assignee_participant_id &&
+                !participantIds.includes(partState.assignee_participant_id)
+            ) {
+                newPartsState[partId] = {
+                    ...partState,
+                    assignee_participant_id: ownerParticipantId
+                };
+                hasChanges = true;
+            }
+        });
+
+        if (hasChanges) {
+            setPartsState(newPartsState);
+        }
+    }, [presentation, participants, partsState]);
+
 
     const {
         sendTextOperations,

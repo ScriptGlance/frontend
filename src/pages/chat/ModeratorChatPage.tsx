@@ -24,6 +24,7 @@ import {NewMessageEvent} from "../../api/socket/chatSocketManager.ts";
 import {useProfile} from "../../hooks/ProfileContext.tsx";
 import {ModeratorProfile} from "../../api/repositories/profileRepository.ts";
 import {Title} from "react-head";
+import ChangePasswordModal from "../../components/modals/changePasswordModal/ChangePasswordModal.tsx";
 
 type ChatTab = "my" | "general" | "history";
 
@@ -62,8 +63,6 @@ const ModeratorChatPage: React.FC = () => {
     const [sending, setSending] = useState(false);
     const [searchValue, setSearchValue] = useState("");
     const [closeChatModalOpen, setCloseChatModalOpen] = useState(false);
-    const [hasTriedLoading, setHasTriedLoading] = useState(false);
-
     const chatRestoredRef = useRef(false);
     const scrollToBottomRef = useRef(false);
 
@@ -175,13 +174,6 @@ const ModeratorChatPage: React.FC = () => {
     useEffect(() => {
         localStorage.setItem(SELECTED_TAB_KEY, selectedTab);
     }, [selectedTab]);
-
-    useEffect(() => {
-        setHasTriedLoading(false);
-    }, [selectedTab, searchValue]);
-    useEffect(() => {
-        if (!chatsLoading) setHasTriedLoading(true);
-    }, [chatsLoading]);
 
     useEffect(() => {
         if (
@@ -327,7 +319,20 @@ const ModeratorChatPage: React.FC = () => {
         [chat, myChats, generalChats, refetchUnreadCounts, setMyChatsDirectly, setGeneralChatsDirectly, setHistoryChatsDirectly]
     );
 
-    const {profile} = useProfile(Role.Moderator);
+    const {profile, updateProfile} = useProfile(Role.Moderator);
+
+    const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
+
+    useEffect(() => {
+        if (profile?.is_temporary_password) {
+            setShowChangePasswordModal(true);
+        }
+    }, [profile]);
+
+    const handleChangePassword = async ({ password }: { password: string }) => {
+        await updateProfile({ password });
+        setShowChangePasswordModal(false);
+    };
 
     const handleSocketAssignmentChange = useCallback(
         (reassignedChat: ModeratorChatListItem) => {
@@ -702,7 +707,7 @@ const ModeratorChatPage: React.FC = () => {
                         {chatsLoading && chatsForCurrentTab.length === 0 && (
                             <div className="chats-loading">Завантаження...</div>
                         )}
-                        {!chatsLoading && chatsForCurrentTab.length === 0 && hasTriedLoading && (
+                        {!chatsLoading && chatsForCurrentTab.length === 0 && (
                             <div className="chats-empty-hint">Чатів не знайдено</div>
                         )}
                         {chatsForCurrentTab.length > 0 && (
@@ -946,6 +951,13 @@ const ModeratorChatPage: React.FC = () => {
                 cancelButtonText="Скасувати"
                 confirmButtonText="Закрити чат"
                 reloadAfterDelete={false}
+            />
+
+            <ChangePasswordModal
+                open={showChangePasswordModal}
+                onSave={handleChangePassword}
+                onClose={() => setShowChangePasswordModal(false)}
+                loading={false}
             />
         </div>
     );
