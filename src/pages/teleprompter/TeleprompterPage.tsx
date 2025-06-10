@@ -184,6 +184,7 @@ const TeleprompterPage: React.FC = () => {
     const readingConfirmationActiveRef = useRef(readingConfirmationActive);
     const lastSentFinalPositionRef = useRef<{ [partId: number]: boolean }>({});
     const [isVideoAutoStoppedByDuration, setVideoAutoStoppedByDuration] = useState(false);
+    const isProcessingConfirmationRef = useRef(false);
 
 
     const [localStructure, setLocalStructure] = useState(activeData?.structure || []);
@@ -587,7 +588,11 @@ const TeleprompterPage: React.FC = () => {
     }, [confirmActiveReader, presentationId]);
 
     const handleConfirmReaderContinue = useCallback(async () => {
+        isProcessingConfirmationRef.current = true;
         await confirmActiveReader(presentationId, false);
+        setTimeout(() => {
+            isProcessingConfirmationRef.current = false;
+        }, 1000);
     }, [confirmActiveReader, presentationId]);
 
     const hideReadingConfirmation = useCallback(() => {
@@ -734,15 +739,18 @@ const TeleprompterPage: React.FC = () => {
             const oldPartId = previousHighlightedPartIdRef.current;
             const newPartId = currentHighlightedPartId;
 
-            if (oldPartId && profile && newPartId !== null) {
+            if (oldPartId && profile && newPartId !== null && !isProcessingConfirmationRef.current) {
                 const wasSpeakerOfOldPart = getPartAssigneeUserId(oldPartId) === (profile as UserProfile | undefined)?.user_id;
                 const isSpeakerOfNewPart = getPartAssigneeUserId(newPartId) === (profile as UserProfile | undefined)?.user_id;
 
+                if (oldPartId === newPartId) {
+                    previousHighlightedPartIdRef.current = newPartId;
+                    return;
+                }
+
                 if (wasSpeakerOfOldPart && !isSpeakerOfNewPart) {
-                    console.log(`Part changed (useEffect) from ${oldPartId} (our part) to ${newPartId} (not our part). Stopping recognition.`);
                     stopSpeechRecognition();
                 } else if (wasSpeakerOfOldPart && isSpeakerOfNewPart) {
-                    console.log(`Part changed from ${oldPartId} to ${newPartId} (both our parts). Resetting recognition.`);
                     stopSpeechRecognition();
                     recognitionStartAttemptedRef.current = false;
                 }
@@ -1661,9 +1669,9 @@ const TeleprompterPage: React.FC = () => {
         const timeElapsedSinceSocketUpdate = Date.now() - lastPositionUpdateRef.current;
         const recentSocketUpdate = timeElapsedSinceSocketUpdate < 2000;
 
-        if (!recentSocketUpdate && currentPresentationStartDate) {
+        if (!recentSocketUpdate && currentPresentationStartDate && !isProcessingConfirmationRef.current) {
             let initialPartIdToHighlight = currentHighlightedPartId;
-            let initialWordIdx = -1;
+            let initialWordIdx = processedWordsIndicesRef.current[currentHighlightedPartId ?? 0] ?? -1;
 
             if (initialReadingPosition?.partId) {
                 const serverPartId = initialReadingPosition.partId;
@@ -1676,6 +1684,7 @@ const TeleprompterPage: React.FC = () => {
                 }
             } else if (sortedParts.length > 0 && !initialPartIdToHighlight && currentPresentationStartDate) {
                 initialPartIdToHighlight = sortedParts[0].part_id;
+                initialWordIdx = -1;
                 console.log(`Using first part ID ${initialPartIdToHighlight} as fallback`);
             }
 
