@@ -29,9 +29,9 @@ import ChangePasswordModal from "../../components/modals/changePasswordModal/Cha
 type ChatTab = "my" | "general" | "history";
 
 const CHAT_TABS: { label: string; value: ChatTab }[] = [
-    { label: "Мої чати", value: "my" },
-    { label: "Загальні чати", value: "general" },
-    { label: "Історія", value: "history" },
+    {label: "Мої чати", value: "my"},
+    {label: "Загальні чати", value: "general"},
+    {label: "Історія", value: "history"},
 ];
 
 const SELECTED_TAB_KEY = "moderator_selected_tab";
@@ -48,7 +48,7 @@ function uniqueByMessageId(messages: any[]) {
 
 const ModeratorChatPage: React.FC = () => {
     const navigate = useNavigate();
-    const { logout } = useAuth();
+    const {logout} = useAuth();
 
     const [selectedTab, setSelectedTab] = useState<ChatTab>(() => {
         const savedTab = localStorage.getItem(SELECTED_TAB_KEY);
@@ -66,14 +66,7 @@ const ModeratorChatPage: React.FC = () => {
     const chatRestoredRef = useRef(false);
     const scrollToBottomRef = useRef(false);
 
-    const [generalChatsUnread, setGeneralChatsUnread] = useState(0);
-    const [myChatsUnread, setMyChatsUnread] = useState(0);
-    const { generalChatsUnread: fetchedGeneralChatsUnread, myChatsUnread: fetchedMyChatsUnread, refetch: refetchUnreadCounts } = useModeratorUnreadCounts();
-
-    useEffect(() => {
-        setGeneralChatsUnread(fetchedGeneralChatsUnread);
-        setMyChatsUnread(fetchedMyChatsUnread);
-    }, [fetchedGeneralChatsUnread, fetchedMyChatsUnread]);
+    const {generalChatsUnread, myChatsUnread, refetch: refetchUnreadCounts} = useModeratorUnreadCounts();
 
     const {
         chats: myChats,
@@ -211,77 +204,78 @@ const ModeratorChatPage: React.FC = () => {
         setHistoryChatsOffset,
     ]);
 
-    const { assignChat, unassignChat, closeChat, sendMessage, markAsRead } = useModeratorChatActions();
+    const {assignChat, unassignChat, closeChat, sendMessage, markAsRead} = useModeratorChatActions();
 
     const handleSocketMessage = useCallback((data: NewMessageEvent) => {
-        if (data && data.chat_message_id) {
-            const chatId = data.chat_id;
+            if (data && data.chat_message_id) {
+                const chatId = data.chat_id;
 
-            const chatInHistory = historyChats.find(c => c.user_id === data.user_id);
-            if (chatInHistory) {
-                setHistoryChatsDirectly(prev => prev.filter(c => c.chat_id !== chatInHistory.chat_id));
-                setGeneralChatsDirectly(prev => prev.some(c => c.user_id === data.user_id) ? prev : [
-                    {
-                        ...chatInHistory,
-                        chat_id: data.chat_id!,
-                        last_message: data.text,
-                        last_message_sent_date: data.sent_date,
-                        unread_messages_count: 1,
-                    },
-                    ...prev
-                ]);
-                if (selectedTab === "history" && chat?.user_id === data.user_id) {
-                    setChat(null);
+                const chatInHistory = historyChats.find(c => c.user_id === data.user_id);
+                if (chatInHistory) {
+                    setHistoryChatsDirectly(prev => prev.filter(c => c.chat_id !== chatInHistory.chat_id));
+                    setGeneralChatsDirectly(prev => prev.some(c => c.user_id === data.user_id) ? prev : [
+                        {
+                            ...chatInHistory,
+                            chat_id: data.chat_id!,
+                            last_message: data.text,
+                            last_message_sent_date: data.sent_date,
+                            unread_messages_count: 1,
+                        },
+                        ...prev
+                    ]);
+                    if (selectedTab === "history" && chat?.user_id === data.user_id) {
+                        setChat(null);
+                    }
                 }
-            }
 
-            if (chat && chat.chat_id === chatId) {
-                const newMessage: ChatMessage = {
-                    chat_message_id: data.chat_message_id,
-                    user_id: data.user_id,
-                    text: data.text,
-                    is_written_by_moderator: data.is_written_by_moderator,
-                    sent_date: data.sent_date,
+                if (chat && chat.chat_id === chatId) {
+                    const newMessage: ChatMessage = {
+                        chat_message_id: data.chat_message_id,
+                        user_id: data.user_id,
+                        text: data.text,
+                        is_written_by_moderator: data.is_written_by_moderator,
+                        sent_date: data.sent_date,
+                    };
+                    setMessages(prev => uniqueByMessageId([...prev, newMessage]));
+                    scrollToBottomRef.current = true;
+                    if (selectedTab === "my") {
+                        markAsRead(chatId).then(() => {
+                            refetchUnreadCounts();
+                        }).catch(console.error);
+                    }
+                } else {
+                    refetchUnreadCounts();
+                }
+                const updateChatList = (setChatsFn: React.Dispatch<React.SetStateAction<ModeratorChatListItem[]>>) => {
+                    return setChatsFn(prevChats => {
+                        const chatIndex = prevChats.findIndex(c => c.chat_id === chatId);
+                        if (chatIndex === -1) return prevChats;
+
+                        const updatedChats = [...prevChats];
+                        const chatToUpdate = {...updatedChats[chatIndex]};
+
+                        chatToUpdate.last_message = data.text;
+                        chatToUpdate.last_message_sent_date = data.sent_date;
+
+                        if (!data.is_written_by_moderator && (!chat || chat.chat_id !== chatId)) {
+                            chatToUpdate.unread_messages_count += 1;
+                        }
+
+                        updatedChats.splice(chatIndex, 1);
+                        updatedChats.unshift(chatToUpdate);
+
+                        if (chat && chat.chat_id === chatId) {
+                            setChat(chatToUpdate);
+                        }
+
+                        return updatedChats;
+                    });
                 };
-                setMessages(prev => uniqueByMessageId([...prev, newMessage]));
-                scrollToBottomRef.current = true;
-                if (selectedTab === "my") {
-                    markAsRead(chatId).then(() => {
-                        refetchUnreadCounts();
-                    }).catch(console.error);
-                }
+
+                updateChatList(setMyChatsDirectly);
+                updateChatList(setGeneralChatsDirectly);
             }
-
-            const updateChatList = (setChatsFn: React.Dispatch<React.SetStateAction<ModeratorChatListItem[]>>) => {
-                return setChatsFn(prevChats => {
-                    const chatIndex = prevChats.findIndex(c => c.chat_id === chatId);
-                    if (chatIndex === -1) return prevChats;
-
-                    const updatedChats = [...prevChats];
-                    const chatToUpdate = {...updatedChats[chatIndex]};
-
-                    chatToUpdate.last_message = data.text;
-                    chatToUpdate.last_message_sent_date = data.sent_date;
-
-                    if (!data.is_written_by_moderator && (!chat || chat.chat_id !== chatId)) {
-                        chatToUpdate.unread_messages_count += 1;
-                    }
-
-                    updatedChats.splice(chatIndex, 1);
-                    updatedChats.unshift(chatToUpdate);
-
-                    if (chat && chat.chat_id === chatId) {
-                        setChat(chatToUpdate);
-                    }
-
-                    return updatedChats;
-                });
-            };
-
-            updateChatList(setMyChatsDirectly);
-            updateChatList(setGeneralChatsDirectly);
-        }
-    }, [chat, selectedTab, myChats, generalChats, historyChats, setMessages, markAsRead, setMyChatsDirectly, setGeneralChatsDirectly, setHistoryChatsDirectly, refetchUnreadCounts]
+        }, [chat, selectedTab, myChats, generalChats, historyChats, setMessages, markAsRead, setMyChatsDirectly, setGeneralChatsDirectly, setHistoryChatsDirectly, refetchUnreadCounts]
     );
 
 
@@ -329,8 +323,8 @@ const ModeratorChatPage: React.FC = () => {
         }
     }, [profile]);
 
-    const handleChangePassword = async ({ password }: { password: string }) => {
-        await updateProfile({ password });
+    const handleChangePassword = async ({password}: { password: string }) => {
+        await updateProfile({password});
         setShowChangePasswordModal(false);
     };
 
@@ -384,7 +378,6 @@ const ModeratorChatPage: React.FC = () => {
     );
 
 
-
     useChatSocket({
         role: Role.Moderator,
         onMessage: handleSocketMessage,
@@ -394,7 +387,7 @@ const ModeratorChatPage: React.FC = () => {
 
     useEffect(() => {
         if (messagesEndRef.current && scrollToBottomRef.current) {
-            messagesEndRef.current.scrollIntoView({ behavior: "auto" });
+            messagesEndRef.current.scrollIntoView({behavior: "auto"});
             scrollToBottomRef.current = false;
         }
     }, [messages, messagesLoading]);
@@ -611,7 +604,7 @@ const ModeratorChatPage: React.FC = () => {
     const chatListRef = useRef<HTMLDivElement>(null);
     const handleScroll = useCallback(
         (e: React.UIEvent<HTMLDivElement>) => {
-            const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
+            const {scrollTop, scrollHeight, clientHeight} = e.currentTarget;
             if (scrollHeight - scrollTop - clientHeight < 50) {
                 if (selectedTab === "my" && !myChatsLoading && myChats.length > 0 && hasMoreMyChats) {
                     setMyChatsOffset(myChatsOffset + LIMIT);
@@ -667,14 +660,14 @@ const ModeratorChatPage: React.FC = () => {
         <div className="chats-main-container">
             <Title>Сторінка модератора – ScriptGlance</Title>
             <div className="chats-header-bar">
-                <Logo role={Role.Moderator} />
-                <RightHeaderButtons role={Role.Moderator} onLogout={handleLogout} />
+                <Logo role={Role.Moderator}/>
+                <RightHeaderButtons role={Role.Moderator} onLogout={handleLogout}/>
             </div>
             <div className="chats-center-card">
                 <div className="chats-list-sidebar">
                     <div className="chats-search-box">
                         <div className="chats-search-input-wrapper">
-                            <img src={searchIcon} alt="Search" className="chats-search-icon" />
+                            <img src={searchIcon} alt="Search" className="chats-search-icon"/>
                             <input
                                 placeholder="Пошук користувачів..."
                                 className="chats-search-input"
@@ -740,7 +733,7 @@ const ModeratorChatPage: React.FC = () => {
                                                 {c.last_message_sent_date &&
                                                     new Date(c.last_message_sent_date).toLocaleTimeString(
                                                         "uk-UA",
-                                                        { hour: "2-digit", minute: "2-digit" }
+                                                        {hour: "2-digit", minute: "2-digit"}
                                                     )}
                                             </div>
                                             {selectedTab === "my" && c.unread_messages_count > 0 && (
@@ -782,7 +775,7 @@ const ModeratorChatPage: React.FC = () => {
                                         <div className="chats-chat-header-name">
                                             {chat?.user_first_name + " " + chat?.user_last_name}
                                         </div>
-                                        <div style={{ flex: 1 }} />
+                                        <div style={{flex: 1}}/>
                                         {selectedTab === "my" && (
                                             <div className="chat-header-actions">
                                                 <button
@@ -835,7 +828,7 @@ const ModeratorChatPage: React.FC = () => {
                                         className="chats-chat-messages"
                                         ref={messagesContainerRef}
                                         onScroll={handleMessagesScroll}
-                                        style={{ overflowY: "auto", flex: 1 }}
+                                        style={{overflowY: "auto", flex: 1}}
                                     >
                                         {messagesLoading && messages.length === 0 ? (
                                             <div className="chats-loading">Завантаження...</div>
@@ -894,7 +887,7 @@ const ModeratorChatPage: React.FC = () => {
                                                             </React.Fragment>
                                                         );
                                                     })}
-                                                <div ref={messagesEndRef} />
+                                                <div ref={messagesEndRef}/>
                                             </>
                                         )}
                                     </div>
@@ -916,7 +909,7 @@ const ModeratorChatPage: React.FC = () => {
                           rows={1}
                           maxLength={1000}
                           autoFocus
-                          style={{ resize: "none", overflow: "hidden" }}
+                          style={{resize: "none", overflow: "hidden"}}
                           onKeyDown={e => {
                               if (e.key === "Enter" && !e.shiftKey) {
                                   e.preventDefault();
@@ -929,7 +922,7 @@ const ModeratorChatPage: React.FC = () => {
                                                 disabled={sending || !messageInput.trim()}
                                                 className="send-btn"
                                             >
-                                                <img src={sendIcon} alt="Відправити" />
+                                                <img src={sendIcon} alt="Відправити"/>
                                             </button>
                                         </form>
                                     )}
