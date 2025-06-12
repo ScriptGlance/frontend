@@ -31,7 +31,13 @@ import { Title } from 'react-head';
 const ITEMS_PER_PAGE = 20;
 
 export const AdminDashboardPage = () => {
-    const [selectedTab, setSelectedTab] = useState<"users" | "moderators" | "statistics">("users");
+    const [selectedTab, setSelectedTab] = useState<"users" | "moderators" | "statistics">(() => {
+        const storedTab = localStorage.getItem("adminDashboardSelectedTab");
+        if (storedTab === "users" || storedTab === "moderators" || storedTab === "statistics") {
+            return storedTab;
+        }
+        return "users";
+    });
 
     const [search, setSearch] = useState("");
     const [userSort, setUserSort] = useState<"registeredAt" | "name">("registeredAt");
@@ -42,6 +48,9 @@ export const AdminDashboardPage = () => {
     const [userOffset, setUserOffset] = useState(0);
     const [allUsers, setAllUsers] = useState<any[]>([]);
     const [hasMoreUsers, setHasMoreUsers] = useState(true);
+
+    const [userRefreshTrigger, setUserRefreshTrigger] = useState(0);
+    const [modRefreshTrigger, setModRefreshTrigger] = useState(0);
 
     const isLoadingMoreUsersRef = useRef(false);
 
@@ -96,8 +105,9 @@ export const AdminDashboardPage = () => {
         sort: userSort,
         order: userOrder,
         limit: ITEMS_PER_PAGE,
-        offset: userOffset
-    }), [search, userSort, userOrder, userOffset]);
+        offset: userOffset,
+        refresh: userRefreshTrigger
+    }), [search, userSort, userOrder, userOffset, userRefreshTrigger]);
     const { users, loading: usersLoadingFromHook, error: usersError} = useAdminUsers(userQueryParams);
 
     const modQueryParams = useMemo(() => ({
@@ -105,14 +115,19 @@ export const AdminDashboardPage = () => {
         sort: modSort,
         order: modOrder,
         limit: ITEMS_PER_PAGE,
-        offset: modOffset
-    }), [search, modSort, modOrder, modOffset]);
+        offset: modOffset,
+        refresh: modRefreshTrigger
+    }), [search, modSort, modOrder, modOffset, modRefreshTrigger]);
     const { moderators, loading: moderatorsLoadingFromHook, error: moderatorsError } = useAdminModerators(modQueryParams);
 
     const statsParams = useMemo(() => ({ limit: 30, offset: 0 }), []);
     const { dailyStats, loading: dailyStatsLoading, error: dailyStatsError } = useAdminDailyStats(statsParams);
     const { monthlyStats, loading: monthlyStatsLoading, error: monthlyStatsError } = useAdminMonthlyStats(statsParams);
     const { totalStats, loading: totalStatsLoading, error: totalStatsError } = useAdminTotalStats();
+
+    useEffect(() => {
+        localStorage.setItem("adminDashboardSelectedTab", selectedTab);
+    }, [selectedTab]);
 
     const setupUserObserver = useCallback(() => {
         if (userObserverRef.current) userObserverRef.current.disconnect();
@@ -331,6 +346,7 @@ export const AdminDashboardPage = () => {
             setAllUsers([]);
             setUserOffset(0);
             isLoadingMoreUsersRef.current = false;
+            setUserRefreshTrigger(prev => prev + 1);
         } catch (error: any) {
             setShowUserInviteModal(false);
             if (error.status === 409) {
@@ -352,6 +368,7 @@ export const AdminDashboardPage = () => {
             setAllModerators([]);
             setModOffset(0);
             isLoadingMoreModeratorsRef.current = false;
+            setModRefreshTrigger(prev => prev + 1);
         } catch (error: any) {
             setShowModeratorInviteModal(false);
             if (error.status === 409) {
@@ -392,6 +409,7 @@ export const AdminDashboardPage = () => {
                 setAllUsers([]);
                 setUserOffset(0);
                 isLoadingMoreUsersRef.current = false;
+                setUserRefreshTrigger(prev => prev + 1);
             }
         } else {
             success = await deleteModerator(itemToDelete.id);
@@ -399,6 +417,7 @@ export const AdminDashboardPage = () => {
                 setAllModerators([]);
                 setModOffset(0);
                 isLoadingMoreModeratorsRef.current = false;
+                setModRefreshTrigger(prev => prev + 1);
             }
         }
         setShowConfirmModal(false);

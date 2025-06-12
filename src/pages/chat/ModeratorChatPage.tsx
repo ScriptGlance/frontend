@@ -207,76 +207,96 @@ const ModeratorChatPage: React.FC = () => {
     const {assignChat, unassignChat, closeChat, sendMessage, markAsRead} = useModeratorChatActions();
 
     const handleSocketMessage = useCallback((data: NewMessageEvent) => {
-            if (data && data.chat_message_id) {
-                const chatId = data.chat_id;
+        if (data && data.chat_message_id) {
+            const chatId = data.chat_id;
 
-                const chatInHistory = historyChats.find(c => c.user_id === data.user_id);
-                if (chatInHistory) {
-                    setHistoryChatsDirectly(prev => prev.filter(c => c.chat_id !== chatInHistory.chat_id));
-                    setGeneralChatsDirectly(prev => prev.some(c => c.user_id === data.user_id) ? prev : [
-                        {
-                            ...chatInHistory,
-                            chat_id: data.chat_id!,
-                            last_message: data.text,
-                            last_message_sent_date: data.sent_date,
-                            unread_messages_count: 1,
-                        },
-                        ...prev
-                    ]);
-                    if (selectedTab === "history" && chat?.user_id === data.user_id) {
-                        setChat(null);
-                    }
+            const chatInHistory = historyChats.find(c => c.user_id === data.user_id);
+            if (chatInHistory) {
+                setHistoryChatsDirectly(prev => prev.filter(c => c.chat_id !== chatInHistory.chat_id));
+                setGeneralChatsDirectly(prev => prev.some(c => c.user_id === data.user_id) ? prev : [
+                    {
+                        ...chatInHistory,
+                        chat_id: data.chat_id!,
+                        last_message: data.text,
+                        last_message_sent_date: data.sent_date,
+                        unread_messages_count: 1,
+                    },
+                    ...prev
+                ]);
+                if (selectedTab === "history" && chat?.user_id === data.user_id) {
+                    setChat(null);
                 }
+            } else {
+                const existsInMyChats = myChats.some(c => c.user_id === data.user_id);
+                const existsInGeneralChats = generalChats.some(c => c.user_id === data.user_id);
 
-                if (chat && chat.chat_id === chatId) {
-                    const newMessage: ChatMessage = {
-                        chat_message_id: data.chat_message_id,
+                if (!existsInMyChats && !existsInGeneralChats && data.user_id) {
+                    const newChat: ModeratorChatListItem = {
+                        chat_id: data.chat_id!,
                         user_id: data.user_id,
-                        text: data.text,
-                        is_written_by_moderator: data.is_written_by_moderator,
-                        sent_date: data.sent_date,
+                        user_first_name: data.user_first_name || "Новий",
+                        user_last_name: data.user_last_name || "Користувач",
+                        avatar: data.avatar || undefined,
+                        last_message: data.text,
+                        last_message_sent_date: data.sent_date,
+                        unread_messages_count: 1,
+                        assigned_moderator_id: null
                     };
-                    setMessages(prev => uniqueByMessageId([...prev, newMessage]));
-                    scrollToBottomRef.current = true;
-                    if (selectedTab === "my") {
-                        markAsRead(chatId).then(() => {
-                            refetchUnreadCounts();
-                        }).catch(console.error);
-                    }
-                } else {
+
+                    setGeneralChatsDirectly(prev => [newChat, ...prev]);
                     refetchUnreadCounts();
                 }
-                const updateChatList = (setChatsFn: React.Dispatch<React.SetStateAction<ModeratorChatListItem[]>>) => {
-                    return setChatsFn(prevChats => {
-                        const chatIndex = prevChats.findIndex(c => c.chat_id === chatId);
-                        if (chatIndex === -1) return prevChats;
-
-                        const updatedChats = [...prevChats];
-                        const chatToUpdate = {...updatedChats[chatIndex]};
-
-                        chatToUpdate.last_message = data.text;
-                        chatToUpdate.last_message_sent_date = data.sent_date;
-
-                        if (!data.is_written_by_moderator && (!chat || chat.chat_id !== chatId)) {
-                            chatToUpdate.unread_messages_count += 1;
-                        }
-
-                        updatedChats.splice(chatIndex, 1);
-                        updatedChats.unshift(chatToUpdate);
-
-                        if (chat && chat.chat_id === chatId) {
-                            setChat(chatToUpdate);
-                        }
-
-                        return updatedChats;
-                    });
-                };
-
-                updateChatList(setMyChatsDirectly);
-                updateChatList(setGeneralChatsDirectly);
             }
-        }, [chat, selectedTab, myChats, generalChats, historyChats, setMessages, markAsRead, setMyChatsDirectly, setGeneralChatsDirectly, setHistoryChatsDirectly, refetchUnreadCounts]
-    );
+
+            if (chat && chat.chat_id === chatId) {
+                const newMessage: ChatMessage = {
+                    chat_message_id: data.chat_message_id,
+                    user_id: data.user_id,
+                    text: data.text,
+                    is_written_by_moderator: data.is_written_by_moderator,
+                    sent_date: data.sent_date,
+                };
+                setMessages(prev => uniqueByMessageId([...prev, newMessage]));
+                scrollToBottomRef.current = true;
+                if (selectedTab === "my") {
+                    markAsRead(chatId).then(() => {
+                        refetchUnreadCounts();
+                    }).catch(console.error);
+                }
+            } else {
+                refetchUnreadCounts();
+            }
+
+            const updateChatList = (setChatsFn: React.Dispatch<React.SetStateAction<ModeratorChatListItem[]>>) => {
+                return setChatsFn(prevChats => {
+                    const chatIndex = prevChats.findIndex(c => c.chat_id === chatId);
+                    if (chatIndex === -1) return prevChats;
+
+                    const updatedChats = [...prevChats];
+                    const chatToUpdate = {...updatedChats[chatIndex]};
+
+                    chatToUpdate.last_message = data.text;
+                    chatToUpdate.last_message_sent_date = data.sent_date;
+
+                    if (!data.is_written_by_moderator && (!chat || chat.chat_id !== chatId)) {
+                        chatToUpdate.unread_messages_count += 1;
+                    }
+
+                    updatedChats.splice(chatIndex, 1);
+                    updatedChats.unshift(chatToUpdate);
+
+                    if (chat && chat.chat_id === chatId) {
+                        setChat(chatToUpdate);
+                    }
+
+                    return updatedChats;
+                });
+            };
+
+            updateChatList(setMyChatsDirectly);
+            updateChatList(setGeneralChatsDirectly);
+        }
+    }, [chat, selectedTab, myChats, generalChats, historyChats, setMessages, markAsRead, setMyChatsDirectly, setGeneralChatsDirectly, setHistoryChatsDirectly, refetchUnreadCounts]);
 
 
     const handleSocketChatClose = useCallback(
